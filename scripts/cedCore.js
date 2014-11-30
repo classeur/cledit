@@ -1,8 +1,11 @@
 /* jshint -W084, -W099 */
-/* global diff_match_patch */
 // Credit to http://dabblet.com/
 
-(function() {
+(function(diff_match_patch) {
+
+	var DIFF_DELETE = -1;
+	var DIFF_INSERT = 1;
+	var DIFF_EQUAL = 0;
 
 	function ced(contentElt, options) {
 		options = ced.Utils.extend({
@@ -16,16 +19,12 @@
 			options: options,
 			$contentElt: contentElt
 		};
-		var scrollTop = 0;
-		var initSelectionStart = 0;
-		var initSelectionEnd = 0;
-		var initScrollTop = 0;
-		var textContent = '';
+		var scrollTop;
+		var textContent = contentElt.textContent;
 		var onContentChanged = ced.Utils.createHook(this, 'onContentChanged');
 		var debounce = ced.Utils.debounce;
 
 		var highlighter = new ced.Highlighter(editor);
-		editor.highlighter = highlighter;
 
 		var sectionList;
 		function parseSections(content, isInit) {
@@ -36,7 +35,6 @@
 		// Used to detect editor changes
 		var watcher = new ced.Watcher(editor, checkContentChange);
 		watcher.startWatching();
-		editor.watcher = watcher;
 
 		var diffMatchPatch = new diff_match_patch();
 		/*
@@ -54,7 +52,6 @@
 		 */
 
 		var selectionMgr = new ced.SelectionMgr(editor);
-		editor.selectionMgr = selectionMgr;
 		// TODO
 		// $(document).on('selectionchange', '.editor-content', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
@@ -62,7 +59,14 @@
 			selectionMgr.saveSelectionState(true, true, force);
 		}
 
-		editor.adjustCursorPosition = adjustCursorPosition;
+		function getTextContent() {
+			var textContent = contentElt.textContent;
+			if(contentElt.lastChild && contentElt.lastChild === highlighter.trailingLfElt && highlighter.trailingLfElt.textContent.slice(-1) == '\n') {
+				textContent = textContent.slice(0, -1);
+			}
+			textContent = textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
+			return textContent;
+		}
 
 		function replaceContent(selectionStart, selectionEnd, replacement) {
 			var range = selectionMgr.createRange(selectionStart, selectionEnd);
@@ -73,7 +77,7 @@
 			range.insertNode(document.createTextNode(replacement));
 		}
 
-		function setValue(value, noWatch) {
+		function setContent(value, noWatch) {
 			var startOffset = diffMatchPatch.diff_commonPrefix(textContent, value);
 			if(startOffset === textContent.length) {
 				startOffset--;
@@ -100,10 +104,8 @@
 			};
 		}
 
-		editor.setValue = setValue;
-
 		function replace(selectionStart, selectionEnd, replacement) {
-			undoMgr.currentMode = undoMgr.currentMode || 'replace';
+			undoMgr.setDefaultMode('single');
 			replaceContent(selectionStart, selectionEnd, replacement);
 			var endOffset = selectionStart + replacement.length;
 			selectionMgr.setSelectionStartEnd(endOffset, endOffset);
@@ -111,20 +113,16 @@
 			selectionMgr.updateCursorCoordinates(true);
 		}
 
-		editor.replace = replace;
-
 		function replaceAll(search, replacement) {
-			undoMgr.currentMode = undoMgr.currentMode || 'replace';
+			undoMgr.setDefaultMode('single');
 			var value = textContent.replace(search, replacement);
 			if(value != textContent) {
-				var offset = editor.setValue(value);
+				var offset = editor.setContent(value);
 				selectionMgr.setSelectionStartEnd(offset.end, offset.end);
 				selectionMgr.updateSelectionRange();
 				selectionMgr.updateCursorCoordinates(true);
 			}
 		}
-
-		editor.replaceAll = replaceAll;
 
 		function replacePreviousText(text, replacement) {
 			var offset = selectionMgr.selectionStart;
@@ -144,20 +142,9 @@
 			return true;
 		}
 
-		editor.replacePreviousText = replacePreviousText;
-
-		function setValueNoWatch(value) {
-			setValue(value);
-			textContent = value;
-		}
-
-		editor.setValueNoWatch = setValueNoWatch;
-
-		function getValue() {
+		function getContent() {
 			return textContent;
 		}
-
-		editor.getValue = getValue;
 
 		function focus() {
 			contentElt.focus();
@@ -165,10 +152,7 @@
 			contentElt.scrollTop = scrollTop;
 		}
 
-		editor.focus = focus;
-
 		var undoMgr = new ced.UndoMgr(editor);
-		editor.undoMgr = undoMgr;
 
 		// TODO
 		/*
@@ -200,18 +184,9 @@
 			}
 		}, 10);
 
-		function getContent() {
-			var content = contentElt.textContent;
-			if(contentElt.lastChild && contentElt.lastChild === highlighter.trailingLfElt && highlighter.trailingLfElt.textContent.slice(-1) == '\n') {
-				content = content.slice(0, -1);
-			}
-			content = content.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
-			return content;
-		}
-
 		function checkContentChange() {
-			var newContent = getContent();
-			if(newContent == textContent) {
+			var newTextContent = getTextContent();
+			if(newTextContent == textContent) {
 				// User has removed the empty section
 				if(contentElt.children.length === 0) {
 					contentElt.innerHTML = '';
@@ -222,7 +197,12 @@
 				}
 				return;
 			}
-			undoMgr.currentMode = undoMgr.currentMode || 'typing';
+
+			var patches = getPatches(newTextContent);
+			undoMgr.addPatches(patches);
+			undoMgr.setDefaultMode('typing');
+
+
 			// TODO
 			/*
 			 var discussionList = _.values(fileDesc.discussionList);
@@ -232,13 +212,44 @@
 			 fileDesc.discussionList = fileDesc.discussionList; // Write discussionList in localStorage
 			 }
 			 */
-			textContent = newContent;
+			textContent = newTextContent;
 			selectionMgr.saveSelectionState();
 			parseSections(textContent);
 			// TODO
 			//updateDiscussionList && eventMgr.onCommentsChanged(fileDesc);
 			undoMgr.saveState();
 			triggerSpellCheck();
+		}
+
+		function getPatches(newTextContent) {
+			var changes = diffMatchPatch.diff_main(textContent, newTextContent);
+			var patches = [];
+			var startOffset = 0;
+			changes.forEach(function(change) {
+				var changeType = change[0];
+				var changeText = change[1];
+				switch (changeType) {
+					case DIFF_EQUAL:
+						startOffset += changeText.length;
+						break;
+					case DIFF_DELETE:
+						patches.push({
+							insert: false,
+							offset: startOffset,
+							text: changeText
+						});
+						break;
+					case DIFF_INSERT:
+						patches.push({
+							insert: true,
+							offset: startOffset,
+							text: changeText
+						});
+						startOffset += changeText.length;
+						break;
+				}
+			});
+			return patches;
 		}
 
 		function adjustCommentOffsets(oldTextContent, newTextContent, discussionList) {
@@ -288,8 +299,6 @@
 			return changed;
 		}
 
-		editor.adjustCommentOffsets = adjustCommentOffsets;
-
 		// See https://gist.github.com/shimondoodkin/1081133
 		// TODO
 		/*
@@ -302,43 +311,11 @@
 		 }
 		 */
 
-		contentElt.focus = focus;
-		contentElt.adjustCursorPosition = adjustCursorPosition;
-
-		Object.defineProperty(contentElt, 'value', {
-			get: function() {
-				return textContent;
-			},
-			set: setValue
-		});
-
-		Object.defineProperty(contentElt, 'selectionStart', {
-			get: function() {
-				return Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd);
-			},
-			set: function(value) {
-				selectionMgr.setSelectionStartEnd(value);
-				selectionMgr.updateSelectionRange();
-				selectionMgr.updateCursorCoordinates();
-			},
-
-			enumerable: true,
-			configurable: true
-		});
-
-		Object.defineProperty(contentElt, 'selectionEnd', {
-			get: function() {
-				return Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd);
-			},
-			set: function(value) {
-				selectionMgr.setSelectionStartEnd(undefined, value);
-				selectionMgr.updateSelectionRange();
-				selectionMgr.updateCursorCoordinates();
-			},
-
-			enumerable: true,
-			configurable: true
-		});
+		function setSelection(start, end) {
+			selectionMgr.setSelectionStartEnd(start, end);
+			selectionMgr.updateSelectionRange();
+			selectionMgr.updateCursorCoordinates();
+		}
 
 		var clearNewline = false;
 		contentElt.addEventListener('keydown', function(evt) {
@@ -387,16 +364,18 @@
 		contentElt.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
 		contentElt.addEventListener('paste', function(evt) {
-			undoMgr.currentMode = 'paste';
+			undoMgr.setCurrentMode('single');
 			evt.preventDefault();
-			var data = (evt.originalEvent || evt).clipboardData.getData('text/plain') || window.prompt('Paste something...');
-			data = ced.Utils.escape(data);
+			var data = evt.clipboardData.getData('text/plain');
+			if(!data) {
+				return;
+			}
+			replace(selectionMgr.selectionStart, selectionMgr.selectionEnd, data);
 			adjustCursorPosition();
-			document.execCommand('insertHtml', false, data);
 		}, false);
 
 		contentElt.addEventListener('cut', function() {
-			undoMgr.currentMode = 'cut';
+			undoMgr.setCurrentMode('single');
 			adjustCursorPosition();
 		}, false);
 
@@ -409,7 +388,7 @@
 		}, false);
 
 		var action = function(action, options) {
-			var textContent = getValue();
+			var textContent = getContent();
 			var min = Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd);
 			var max = Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd);
 			var state = {
@@ -421,7 +400,7 @@
 			};
 
 			actions[action](state, options || {});
-			setValue(state.before + state.selection + state.after);
+			setContent(state.before + state.selection + state.after);
 			selectionMgr.setSelectionStartEnd(state.selectionStart, state.selectionEnd);
 			selectionMgr.updateSelectionRange();
 		};
@@ -484,7 +463,7 @@
 					clearNewline = true;
 				}
 
-				undoMgr.currentMode = 'newlines';
+				undoMgr.setCurrentMode('single');
 
 				state.before += '\n' + indent;
 				state.selection = '';
@@ -493,22 +472,33 @@
 			}
 		};
 
-		function init() {
-			textContent = getContent();
-			selectionMgr.setSelectionStartEnd(initSelectionStart, initSelectionEnd);
-			selectionMgr.updateSelectionRange();
-			selectionMgr.updateCursorCoordinates();
-			undoMgr.saveSelectionState();
-			parseSections(textContent, true);
-			scrollTop = initScrollTop;
-			contentElt.scrollTop = scrollTop;
-		}
-		init();
+		editor.selectionMgr = selectionMgr;
+		editor.undoMgr = undoMgr;
+		editor.highlighter = highlighter;
+		editor.watcher = watcher;
 		editor.init = init;
-		return editor;
+		editor.adjustCursorPosition = adjustCursorPosition;
+		editor.setContent = setContent;
+		editor.replace = replace;
+		editor.replaceAll = replaceAll;
+		editor.replacePreviousText = replacePreviousText;
+		editor.getContent = getContent;
+		editor.focus = focus;
+		editor.setSelection = setSelection;
+		editor.adjustCommentOffsets = adjustCommentOffsets;
 
+		function init() {
+			undoMgr.init();
+			selectionMgr.saveSelectionState();
+			parseSections(textContent, true);
+			scrollTop = contentElt.scrollTop;
+		}
+
+		init();
+
+		return editor;
 	}
 
 	window.ced = ced;
-})();
+})(window.diff_match_patch);
 

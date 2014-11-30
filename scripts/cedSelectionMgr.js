@@ -187,12 +187,18 @@
 			var nextTickAdjustScroll = false;
 			var debouncedSave = debounce(function() {
 				save();
+				self.updateCursorCoordinates(nextTickAdjustScroll);
+				// In some cases we have to wait a little bit more to see the selection change (Cmd+A on Chrome/OSX)
+				longerDebouncedSave();
+			});
+			var longerDebouncedSave = debounce(function() {
+				save();
 				if(lastSelectionStart === self.selectionStart && lastSelectionEnd === self.selectionEnd) {
 					nextTickAdjustScroll = false;
 				}
 				self.updateCursorCoordinates(nextTickAdjustScroll);
 				nextTickAdjustScroll = false;
-			});
+			}, 10);
 
 			return function(debounced, adjustScroll, forceAdjustScroll) {
 				if(forceAdjustScroll) {
@@ -212,7 +218,7 @@
 		this.getSelectedText = function() {
 			var min = Math.min(this.selectionStart, this.selectionEnd);
 			var max = Math.max(this.selectionStart, this.selectionEnd);
-			return editor.getValue().substring(min, max);
+			return editor.getContent().substring(min, max);
 		};
 
 		this.getCoordinates = function(inputOffset, container, offsetInContainer) {
@@ -227,7 +233,7 @@
 				y = container.parentNode.offsetTop + container.parentNode.offsetHeight / 2;
 			}
 			else {
-				var selectedChar = editor.getValue()[inputOffset];
+				var selectedChar = editor.getContent()[inputOffset];
 				var startOffset = {
 					container: container,
 					offsetInContainer: offsetInContainer,
@@ -270,7 +276,7 @@
 			var offsetStart = 0;
 			var offsetEnd = 0;
 			var nextOffset = 0;
-			editor.getValue().split(/\s/).some(function(word) {
+			editor.getContent().split(/\s/).some(function(word) {
 				if(word) {
 					offsetStart = nextOffset;
 					offsetEnd = nextOffset + word.length;

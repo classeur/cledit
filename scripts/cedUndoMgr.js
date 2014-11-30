@@ -1,80 +1,135 @@
 /* jshint -W084, -W099 */
 (function(ced) {
 
-	function UndoMgr(editor) {
-		var selectionMgr = editor.selectionMgr;
+	function UndoMgr(editor, options) {
+		options = ced.Utils.extend({
+			undoStackMaxSize: 200,
+			bufferStateUntilIdle: 1000
+		}, options || {});
+
+		var selectionMgr;
 		var undoStack = [];
 		var redoStack = [];
-		var lastTime = 0;
-		var lastMode;
 		var currentState;
+		var previousPatches = [];
+		var currentPatches = [];
 		var selectionStartBefore;
 		var selectionEndBefore;
 		var debounce = ced.Utils.debounce;
+		var onButtonStateChange = ced.Utils.createHook(this, 'onButtonStateChange');
 
-		this.setCommandMode = function() {
-			this.currentMode = 'command';
+		function State() {
+			this.selectionStartBefore = selectionStartBefore;
+			this.selectionEndBefore = selectionEndBefore;
+			this.selectionStartAfter = selectionMgr.selectionStart;
+			this.selectionEndAfter = selectionMgr.selectionEnd;
+		}
+
+		function addToStack(stack) {
+			return function() {
+				stack.push(this);
+				this.patches = previousPatches;
+				previousPatches = [];
+			};
+		}
+
+		State.prototype.addToUndoStack = addToStack(undoStack);
+		State.prototype.addToRedoStack = addToStack(redoStack);
+
+		function StateMgr() {
+			var currentTime, lastTime;
+			var lastMode;
+
+			this.isBufferState = function() {
+				currentTime = Date.now();
+				return this.currentMode != 'single' &&
+					this.currentMode == lastMode &&
+					currentTime - lastTime < options.bufferStateUntilIdle;
+			};
+
+			this.setDefaultMode = function(mode) {
+				this.currentMode = this.currentMode || mode;
+			};
+
+			this.resetMode = function() {
+				stateMgr.currentMode = undefined;
+				lastMode = undefined;
+			};
+
+			this.saveMode = function() {
+				lastMode = this.currentMode;
+				this.currentMode = undefined;
+				lastTime = currentTime;
+			};
+		}
+
+		var stateMgr = new StateMgr();
+		this.setCurrentMode = function(mode) {
+			stateMgr.currentMode = mode;
+		};
+		this.setDefaultMode = stateMgr.setDefaultMode.bind(stateMgr);
+
+		this.addPatches = function(patches) {
+			Array.prototype.push.apply(currentPatches, patches);
 		};
 
-		this.setMode = function() {
-		}; // For compatibility with PageDown
+		function saveCurrentPatches() {
+			// Move currentPatches into previousPatches
+			Array.prototype.push.apply(previousPatches, currentPatches);
+			currentPatches = [];
+		}
 
-		this.onButtonStateChange = function() {
-		}; // To be overridden by PageDown
-
-		this.saveState = debounce((function() {
-			redoStack = [];
-			var currentTime = Date.now();
-			if(this.currentMode == 'comment' ||
-				this.currentMode == 'replace' ||
-				lastMode == 'newlines' ||
-				this.currentMode != lastMode ||
-				currentTime - lastTime > 1000) {
-				undoStack.push(currentState);
-				// Limit the size of the stack
-				while(undoStack.length > 100) {
-					undoStack.shift();
-				}
-			}
-			else {
+		this.saveState = debounce(function() {
+			redoStack.length = 0;
+			if(stateMgr.isBufferState()) {
 				// Restore selectionBefore that has potentially been modified by saveSelectionState
 				selectionStartBefore = currentState.selectionStartBefore;
 				selectionEndBefore = currentState.selectionEndBefore;
 			}
-			currentState = {
-				selectionStartBefore: selectionStartBefore,
-				selectionEndBefore: selectionEndBefore,
-				selectionStartAfter: selectionMgr.selectionStart,
-				selectionEndAfter: selectionMgr.selectionEnd,
-				content: editor.getValue(),
-				// TODO
-				// discussionListJSON: fileDesc.discussionListJSON
-			};
-			lastTime = currentTime;
-			lastMode = this.currentMode;
-			this.currentMode = undefined;
-			this.onButtonStateChange();
-		}).bind(this));
+			else {
+				// Save current state
+				currentState.addToUndoStack();
+
+				// Limit the size of the stack
+				while(undoStack.length > options.undoStackMaxSize) {
+					undoStack.shift();
+				}
+			}
+			saveCurrentPatches();
+			currentState = new State();
+			stateMgr.saveMode();
+			onButtonStateChange();
+		});
 
 		this.saveSelectionState = debounce(function() {
-			// Should happen just after saveState
-			if(this.currentMode === undefined) {
+			// Supposed to happen just after saveState
+			if(stateMgr.currentMode === undefined) {
 				selectionStartBefore = selectionMgr.selectionStart;
 				selectionEndBefore = selectionMgr.selectionEnd;
 			}
 		}, 50);
 
 		this.canUndo = function() {
-			return undoStack.length;
+			return !!undoStack.length;
 		};
 
 		this.canRedo = function() {
-			return redoStack.length;
+			return !!redoStack.length;
 		};
 
-		function restoreState(state, selectionStart, selectionEnd) {
+		function restoreState(patches, selectionStart, selectionEnd, isForward) {
 			// Update editor
-			editor.setValue(state.content, true);
+			var content = editor.getContent();
+			patches = isForward ? patches : patches.slice().reverse();
+			patches.forEach(function(patch) {
+				if(isForward ^ patch.insert) {
+					content = content.slice(0, patch.offset) + content.slice(patch.offset + patch.text.length);
+				}
+				else {
+					content = content.slice(0, patch.offset) + patch.text + content.slice(patch.offset);
+				}
+			});
+			editor.setContent(content, true);
 			selectionMgr.setSelectionStartEnd(selectionStart, selectionEnd);
 			selectionMgr.updateSelectionRange();
 			selectionMgr.updateCursorCoordinates(true);
@@ -104,10 +159,8 @@
 
 			selectionStartBefore = selectionStart;
 			selectionEndBefore = selectionEnd;
-			currentState = state;
-			this.currentMode = undefined;
-			lastMode = undefined;
-			this.onButtonStateChange();
+			stateMgr.resetMode();
+			onButtonStateChange();
 			editor.adjustCursorPosition();
 		}
 
@@ -116,8 +169,11 @@
 			if(!state) {
 				return;
 			}
-			redoStack.push(currentState);
-			restoreState.call(this, state, currentState.selectionStartBefore, currentState.selectionEndBefore);
+			saveCurrentPatches();
+			currentState.addToRedoStack();
+			restoreState(currentState.patches, currentState.selectionStartBefore, currentState.selectionEndBefore);
+			previousPatches = state.patches;
+			currentState = state;
 		};
 
 		this.redo = function() {
@@ -125,19 +181,16 @@
 			if(!state) {
 				return;
 			}
-			undoStack.push(currentState);
-			restoreState.call(this, state, state.selectionStartAfter, state.selectionEndAfter);
+			currentState.addToUndoStack();
+			restoreState(state.patches, state.selectionStartAfter, state.selectionEndAfter, true);
+			previousPatches = state.patches;
+			currentState = state;
 		};
 
-		currentState = {
-			selectionStartAfter: selectionMgr.selectionStart,
-			selectionEndAfter: selectionMgr.selectionEnd,
-			content: editor.getValue(),
-			// TODO
-			//discussionListJSON: fileDesc.discussionListJSON
+		this.init = function() {
+			selectionMgr = editor.selectionMgr;
+			currentState = new State();
 		};
-
-		this.currentMode = undefined;
 	}
 
 	ced.UndoMgr = UndoMgr;
