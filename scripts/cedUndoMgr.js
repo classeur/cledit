@@ -189,7 +189,7 @@
 
 		this.init = function() {
 			selectionMgr = editor.selectionMgr;
-			currentState = new State();
+			currentState = currentState || new State();
 		};
 	}
 

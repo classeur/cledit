@@ -7,21 +7,22 @@
 	var DIFF_INSERT = 1;
 	var DIFF_EQUAL = 0;
 
-	function ced(contentElt, options) {
-		options = ced.Utils.extend({
-			cursorFocusRatio: 0.5,
-			language: {}
-		}, options || {});
-
-		contentElt.contentEditable = true;
-
+	function ced(contentElt) {
 		var editor = {
-			options: options,
 			$contentElt: contentElt
 		};
+
+		editor.toggleEditable = function(isEditable) {
+			if(isEditable === undefined) {
+				isEditable = !contentElt.contentEditable;
+			}
+			contentElt.contentEditable = isEditable;
+		};
+		editor.toggleEditable(true);
+
 		var scrollTop;
 		var textContent = contentElt.textContent;
-		var onContentChanged = ced.Utils.createHook(this, 'onContentChanged');
+		var onContentChanged = ced.Utils.createHook(editor, 'onContentChanged');
 		var debounce = ced.Utils.debounce;
 
 		var highlighter = new ced.Highlighter(editor);
@@ -476,7 +477,6 @@
 		editor.undoMgr = undoMgr;
 		editor.highlighter = highlighter;
 		editor.watcher = watcher;
-		editor.init = init;
 		editor.adjustCursorPosition = adjustCursorPosition;
 		editor.setContent = setContent;
 		editor.replace = replace;
@@ -487,14 +487,23 @@
 		editor.setSelection = setSelection;
 		editor.adjustCommentOffsets = adjustCommentOffsets;
 
-		function init() {
+		editor.init = function(options) {
+			options = ced.Utils.extend({
+				cursorFocusRatio: 0.5,
+				language: {},
+				sectionDelimiter: ''
+			}, options || {});
+			editor.options = options;
+
+			if(!(options.sectionDelimiter instanceof RegExp)) {
+				options.sectionDelimiter = new RegExp(options.sectionDelimiter, 'gm');
+			}
+
 			undoMgr.init();
 			selectionMgr.saveSelectionState();
 			parseSections(textContent, true);
 			scrollTop = contentElt.scrollTop;
-		}
-
-		init();
+		};
 
 		return editor;
 	}

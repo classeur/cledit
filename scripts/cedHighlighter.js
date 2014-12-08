@@ -17,7 +17,8 @@
 			 }
 			 */
 			var sectionElt = document.createElement('span');
-			sectionElt.className = 'wmd-input-section';
+			sectionElt.id = 'classeur-editor-section-' + section.id;
+			sectionElt.className = 'classeur-editor-section';
 			sectionElt.generated = true;
 			sectionElt.innerHTML = text;
 			section.elt = sectionElt;
@@ -67,7 +68,7 @@
 			insertBeforeSection = undefined;
 
 			if(isInit) {
-				// Render everything if file changed
+				// Render everything if isInit
 				sectionsToRemove = sectionList;
 				sectionList = newSectionList;
 				modifiedSections = newSectionList;
@@ -78,12 +79,12 @@
 				sectionList.some(function(section, index) {
 					var newSection = newSectionList[index];
 					if(index >= newSectionList.length ||
-							// Check modified
-						section.textWithFrontMatter != newSection.textWithFrontMatter ||
+							// Check text modification
+						section.text != newSection.text ||
 							// Check that section has not been detached or moved
 						section.elt.parentNode !== contentElt ||
 							// Check also the content since nodes can be injected in sections via copy/paste
-						section.elt.textContent != newSection.textWithFrontMatter) {
+						section.elt.textContent != newSection.text) {
 						leftIndex = index;
 						return true;
 					}
@@ -95,11 +96,11 @@
 					var newSection = newSectionList[newSectionList.length - index - 1];
 					if(index >= newSectionList.length ||
 							// Check modified
-						section.textWithFrontMatter != newSection.textWithFrontMatter ||
+						section.text != newSection.text ||
 							// Check that section has not been detached or moved
 						section.elt.parentNode !== contentElt ||
 							// Check also the content since nodes can be injected in sections via copy/paste
-						section.elt.textContent != newSection.textWithFrontMatter) {
+						section.elt.textContent != newSection.text) {
 						rightIndex = -index;
 						return true;
 					}
