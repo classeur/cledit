@@ -134,30 +134,30 @@
 				if(isInit) {
 					contentElt.innerHTML = '';
 					contentElt.appendChild(newSectionEltList);
+					return this.addTrailingLfElt();
+				}
+
+				// Remove outdated sections
+				sectionsToRemove.forEach(function(section) {
+					// section can be already removed
+					section.elt.parentNode === contentElt && contentElt.removeChild(section.elt);
+				});
+
+				if(insertBeforeSection !== undefined) {
+					contentElt.insertBefore(newSectionEltList, insertBeforeSection.elt);
 				}
 				else {
-					// Remove outdated sections
-					sectionsToRemove.forEach(function(section) {
-						// section can be already removed
-						section.elt.parentNode === contentElt && contentElt.removeChild(section.elt);
-					});
+					contentElt.appendChild(newSectionEltList);
+				}
 
-					if(insertBeforeSection !== undefined) {
-						contentElt.insertBefore(newSectionEltList, insertBeforeSection.elt);
+				// Remove unauthorized nodes (text nodes outside of sections or duplicated sections via copy/paste)
+				var childNode = contentElt.firstChild;
+				while(childNode) {
+					var nextNode = childNode.nextSibling;
+					if(!childNode.generated) {
+						contentElt.removeChild(childNode);
 					}
-					else {
-						contentElt.appendChild(newSectionEltList);
-					}
-
-					// Remove unauthorized nodes (text nodes outside of sections or duplicated sections via copy/paste)
-					var childNode = contentElt.firstChild;
-					while(childNode) {
-						var nextNode = childNode.nextSibling;
-						if(!childNode.generated) {
-							contentElt.removeChild(childNode);
-						}
-						childNode = nextNode;
-					}
+					childNode = nextNode;
 				}
 				this.addTrailingLfElt();
 				editor.selectionMgr.updateSelectionRange();
