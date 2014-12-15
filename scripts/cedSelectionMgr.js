@@ -108,13 +108,14 @@
 			debouncedUpdateCursorCoordinates();
 		};
 
-		this.updateSelectionRange = function() {
+		this.restoreSelection = function() {
 			var min = Math.min(this.selectionStart, this.selectionEnd);
 			var max = Math.max(this.selectionStart, this.selectionEnd);
-			var range = this.createRange(min, max);
+			var selectionRange = this.createRange(min, max);
 			var selection = rangy.getSelection();
 			selection.removeAllRanges();
-			selection.addRange(range, this.selectionStart > this.selectionEnd);
+			selection.addRange(selectionRange, this.selectionStart > this.selectionEnd);
+			onSelectionChanged(this.selectionStart, this.selectionEnd, selectionRange);
 		};
 
 		var saveLastSelection = debounce(function() {
@@ -122,9 +123,9 @@
 			lastSelectionEnd = self.selectionEnd;
 		}, 50);
 
-		this.setSelectionStartEnd = function(start, end, selectionRange) {
+		function setSelection(start, end) {
 			if(start === undefined) {
-				start = this.selectionStart;
+				start = self.selectionStart;
 			}
 			if(start < 0) {
 				start = 0;
@@ -135,12 +136,14 @@
 			if(end < 0) {
 				end = 0;
 			}
-			if(this.selectionStart != start || this.selectionEnd != end) {
-				this.selectionStart = start;
-				this.selectionEnd = end;
-				onSelectionChanged(start, end, selectionRange);
-				saveLastSelection();
-			}
+			self.selectionStart = start;
+			self.selectionEnd = end;
+			saveLastSelection();
+		}
+
+		this.setSelectionStartEnd = function(start, end) {
+			setSelection(start, end);
+			this.restoreSelection();
 		};
 
 		this.saveSelectionState = (function() {
@@ -174,11 +177,12 @@
 							// In IE if end of line is selected, offset is wrong
 							// Also, in Firefox cursor can be after the trailingLfNode
 							selectionStart = --selectionEnd;
-							self.setSelectionStartEnd(selectionStart, selectionEnd, selectionRange);
-							self.updateSelectionRange();
+							self.setSelectionStartEnd(selectionStart, selectionEnd);
 						}
-
-						self.setSelectionStartEnd(selectionStart, selectionEnd, selectionRange);
+						else {
+							setSelection(selectionStart, selectionEnd);
+							onSelectionChanged(selectionStart, selectionEnd, selectionRange);
+						}
 						editor.undoMgr.saveSelectionState();
 					}
 				}

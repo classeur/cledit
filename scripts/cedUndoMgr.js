@@ -131,7 +131,6 @@
 			});
 			editor.setContent(content, true);
 			selectionMgr.setSelectionStartEnd(selectionStart, selectionEnd);
-			selectionMgr.updateSelectionRange();
 			selectionMgr.updateCursorCoordinates(true);
 			// TODO
 			/*

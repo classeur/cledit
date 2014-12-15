@@ -139,8 +139,10 @@
 
 				// Remove outdated sections
 				sectionsToRemove.forEach(function(section) {
-					// section can be already removed
+					// section may be already removed
 					section.elt.parentNode === contentElt && contentElt.removeChild(section.elt);
+					// To detect sections that come back with built-in undo
+					section.elt.generated = false;
 				});
 
 				if(insertBeforeSection !== undefined) {
@@ -160,7 +162,7 @@
 					childNode = nextNode;
 				}
 				this.addTrailingLfElt();
-				editor.selectionMgr.updateSelectionRange();
+				editor.selectionMgr.restoreSelection();
 				editor.selectionMgr.updateCursorCoordinates();
 			}).bind(this));
 

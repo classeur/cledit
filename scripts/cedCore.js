@@ -114,7 +114,6 @@
 			replaceContent(selectionStart, selectionEnd, replacement);
 			var endOffset = selectionStart + replacement.length;
 			selectionMgr.setSelectionStartEnd(endOffset, endOffset);
-			selectionMgr.updateSelectionRange();
 			selectionMgr.updateCursorCoordinates(true);
 		}
 
@@ -124,7 +123,6 @@
 			if(value != textContent) {
 				var offset = editor.setContent(value);
 				selectionMgr.setSelectionStartEnd(offset.end, offset.end);
-				selectionMgr.updateSelectionRange();
 				selectionMgr.updateCursorCoordinates(true);
 			}
 		}
@@ -142,7 +140,6 @@
 			range.insertNode(document.createTextNode(replacement));
 			offset = offset - text.length + replacement.length;
 			selectionMgr.setSelectionStartEnd(offset, offset);
-			selectionMgr.updateSelectionRange();
 			selectionMgr.updateCursorCoordinates(true);
 			return true;
 		}
@@ -152,8 +149,7 @@
 		}
 
 		function focus() {
-			contentElt.focus();
-			selectionMgr.updateSelectionRange();
+			selectionMgr.restoreSelection();
 			contentElt.scrollTop = scrollTop;
 		}
 
@@ -318,7 +314,6 @@
 
 		function setSelection(start, end) {
 			selectionMgr.setSelectionStartEnd(start, end);
-			selectionMgr.updateSelectionRange();
 			selectionMgr.updateCursorCoordinates();
 		}
 
@@ -414,7 +409,6 @@
 			actions[action](state, options || {});
 			setContent(state.before + state.selection + state.after);
 			selectionMgr.setSelectionStartEnd(state.selectionStart, state.selectionEnd);
-			selectionMgr.updateSelectionRange();
 		};
 
 		var indentRegex = /^ {0,3}>[ ]*|^[ \t]*(?:[*+\-]|(\d+)\.)[ \t]|^\s+/;
