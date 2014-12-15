@@ -1,5 +1,5 @@
 /* jshint -W084, -W099 */
-// Credit to http://dabblet.com/
+// Credit: http://dabblet.com/
 
 (function(diff_match_patch) {
 
@@ -7,9 +7,10 @@
 	var DIFF_INSERT = 1;
 	var DIFF_EQUAL = 0;
 
-	function ced(contentElt) {
+	function ced(contentElt, scrollElt) {
 		var editor = {
-			$contentElt: contentElt
+			$contentElt: contentElt,
+			$scrollElt: scrollElt || contentElt
 		};
 
 		editor.toggleEditable = function(isEditable) {
@@ -70,7 +71,10 @@
 		}
 
 		function replaceContent(selectionStart, selectionEnd, replacement) {
-			var range = selectionMgr.createRange(selectionStart, selectionEnd);
+			var range = selectionMgr.createRange(
+				Math.min(selectionStart, selectionEnd),
+				Math.max(selectionStart, selectionEnd)
+			);
 			if('' + range == replacement) {
 				return;
 			}
@@ -367,7 +371,14 @@
 		contentElt.addEventListener('paste', function(evt) {
 			undoMgr.setCurrentMode('single');
 			evt.preventDefault();
-			var data = evt.clipboardData.getData('text/plain');
+			var data, clipboardData = evt.clipboardData;
+			if(clipboardData) {
+				data = clipboardData.getData('text/plain');
+			}
+			else {
+				clipboardData = window.clipboardData;
+				data = clipboardData && clipboardData.getData('Text');
+			}
 			if(!data) {
 				return;
 			}

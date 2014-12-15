@@ -4,6 +4,7 @@
 	function SelectionMgr(editor) {
 		var debounce = ced.Utils.debounce;
 		var contentElt = editor.$contentElt;
+		var scrollElt = editor.$scrollElt;
 		var onCursorCoordinatesChanged = ced.Utils.createHook(this, 'onCursorCoordinatesChanged');
 		var onSelectionChanged = ced.Utils.createHook(this, 'onSelectionChanged');
 
@@ -85,17 +86,17 @@
 			}
 			if(adjustScroll) {
 				var adjustTop, adjustBottom;
-				adjustTop = adjustBottom = contentElt.offsetHeight / 2 * editor.options.cursorFocusRatio;
+				adjustTop = adjustBottom = scrollElt.offsetHeight / 2 * editor.options.cursorFocusRatio;
 				adjustTop = this.adjustTop || adjustTop;
 				adjustBottom = this.adjustBottom || adjustTop;
 				if(adjustTop && adjustBottom) {
-					var cursorMinY = contentElt.scrollTop + adjustTop;
-					var cursorMaxY = contentElt.scrollTop + contentElt.offsetHeight - adjustBottom;
+					var cursorMinY = scrollElt.scrollTop + adjustTop;
+					var cursorMaxY = scrollElt.scrollTop + scrollElt.offsetHeight - adjustBottom;
 					if(this.cursorY < cursorMinY) {
-						contentElt.scrollTop += this.cursorY - cursorMinY;
+						scrollElt.scrollTop += this.cursorY - cursorMinY;
 					}
 					else if(this.cursorY > cursorMaxY) {
-						contentElt.scrollTop += this.cursorY - cursorMaxY;
+						scrollElt.scrollTop += this.cursorY - cursorMaxY;
 					}
 				}
 			}
@@ -121,7 +122,7 @@
 			lastSelectionEnd = self.selectionEnd;
 		}, 50);
 
-		this.setSelectionStartEnd = function(start, end) {
+		this.setSelectionStartEnd = function(start, end, selectionRange) {
 			if(start === undefined) {
 				start = this.selectionStart;
 			}
@@ -137,7 +138,7 @@
 			if(this.selectionStart != start || this.selectionEnd != end) {
 				this.selectionStart = start;
 				this.selectionEnd = end;
-				onSelectionChanged(start, end);
+				onSelectionChanged(start, end, selectionRange);
 				saveLastSelection();
 			}
 		};
@@ -149,18 +150,16 @@
 				var selection = rangy.getSelection();
 				if(selection.rangeCount > 0) {
 					var selectionRange = selection.getRangeAt(0);
-					var element = selectionRange.startContainer;
-					if((contentElt.compareDocumentPosition(element) & 0x10)) {
-						var container = element;
-						var offset = selectionRange.startOffset;
-						do {
-							while(element = element.previousSibling) {
-								if(element.textContent) {
-									offset += element.textContent.length;
-								}
-							}
-							element = container = container.parentNode;
-						} while(element && element != contentElt);
+					var node = selectionRange.startContainer;
+					if((contentElt.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_CONTAINED_BY) || contentElt === node) {
+						var range = self.createRange({
+							container: contentElt,
+							offsetInContainer: 0
+						}, {
+							container: node,
+							offsetInContainer: selectionRange.startOffset
+						});
+						var offset = range.toString().length;
 
 						if(selection.isBackwards()) {
 							selectionStart = offset + (selectionRange + '').length;
@@ -175,13 +174,14 @@
 							// In IE if end of line is selected, offset is wrong
 							// Also, in Firefox cursor can be after the trailingLfNode
 							selectionStart = --selectionEnd;
-							self.setSelectionStartEnd(selectionStart, selectionEnd);
+							self.setSelectionStartEnd(selectionStart, selectionEnd, selectionRange);
 							self.updateSelectionRange();
 						}
+
+						self.setSelectionStartEnd(selectionStart, selectionEnd, selectionRange);
+						editor.undoMgr.saveSelectionState();
 					}
 				}
-				self.setSelectionStartEnd(selectionStart, selectionEnd);
-				editor.undoMgr.saveSelectionState();
 			}
 
 			var nextTickAdjustScroll = false;
