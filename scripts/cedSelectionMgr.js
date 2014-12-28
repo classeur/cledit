@@ -248,10 +248,20 @@
 				container = offset.container;
 				offsetInContainer = offset.offsetInContainer;
 			}
+			var containerElt = container;
+			if(!containerElt.hasChildNodes()) {
+				containerElt = container.parentNode;
+			}
+			var isInvisible = false;
+			var index = editor.$allElements.indexOf(containerElt);
+			while(containerElt.offsetHeight === 0 && index > 0) {
+				isInvisible = true;
+				containerElt = editor.$allElements[--index];
+			}
 			var x = 0;
 			var y = 0;
-			if(container.textContent == '\n') {
-				y = container.parentNode.offsetTop + container.parentNode.offsetHeight / 2;
+			if(isInvisible || container.textContent == '\n') {
+				y = containerElt.offsetTop + containerElt.offsetHeight / 2;
 			}
 			else {
 				var selectedChar = editor.getContent()[inputOffset];

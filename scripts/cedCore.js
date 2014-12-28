@@ -31,6 +31,7 @@
 		var sectionList;
 		function parseSections(content, isInit) {
 			sectionList = highlighter.parseSections(content, isInit);
+			editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.classeur-editor-section *'));
 			onContentChanged(content, sectionList);
 		}
 
