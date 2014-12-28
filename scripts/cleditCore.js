@@ -7,12 +7,12 @@
 	var DIFF_INSERT = 1;
 	var DIFF_EQUAL = 0;
 
-	function ced(contentElt, scrollElt) {
+	function cledit(contentElt, scrollElt) {
 		var editor = {
 			$contentElt: contentElt,
 			$scrollElt: scrollElt || contentElt
 		};
-		ced.Utils.createEventHooks(editor);
+		cledit.Utils.createEventHooks(editor);
 
 		editor.toggleEditable = function(isEditable) {
 			if(isEditable === undefined) {
@@ -24,9 +24,9 @@
 
 		var scrollTop;
 		var textContent = contentElt.textContent;
-		var debounce = ced.Utils.debounce;
+		var debounce = cledit.Utils.debounce;
 
-		var highlighter = new ced.Highlighter(editor);
+		var highlighter = new cledit.Highlighter(editor);
 
 		var sectionList;
 		function parseSections(content, isInit) {
@@ -36,7 +36,7 @@
 		}
 
 		// Used to detect editor changes
-		var watcher = new ced.Watcher(editor, checkContentChange);
+		var watcher = new cledit.Watcher(editor, checkContentChange);
 		watcher.startWatching();
 
 		var diffMatchPatch = new diff_match_patch();
@@ -54,7 +54,7 @@
 		 });
 		 */
 
-		var selectionMgr = new ced.SelectionMgr(editor);
+		var selectionMgr = new cledit.SelectionMgr(editor);
 		// TODO
 		// $(document).on('selectionchange', '.editor-content', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
@@ -154,7 +154,7 @@
 			contentElt.scrollTop = scrollTop;
 		}
 
-		var undoMgr = new ced.UndoMgr(editor);
+		var undoMgr = new cledit.UndoMgr(editor);
 
 		// TODO
 		/*
@@ -508,7 +508,7 @@
 		editor.adjustCommentOffsets = adjustCommentOffsets;
 
 		editor.init = function(options) {
-			options = ced.Utils.extend({
+			options = cledit.Utils.extend({
 				cursorFocusRatio: 0.5,
 				language: {},
 				sectionDelimiter: ''
@@ -528,6 +528,6 @@
 		return editor;
 	}
 
-	window.ced = ced;
+	window.cledit = cledit;
 })(window.diff_match_patch);
 

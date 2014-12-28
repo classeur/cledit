@@ -4,7 +4,7 @@
  * @author Lea Verou http://lea.verou.me
  */
 
-(function(ced) {
+(function(cledit) {
 
 	var Prism = {
 		highlight: function(text, grammar, language) {
@@ -124,6 +124,6 @@
 		return '<' + env.tag + ' class="' + env.classes.join(' ') + '" ' + attributes + '>' + env.content + '</' + env.tag + '>';
 	};
 
-	ced.Prism = Prism;
+	cledit.Prism = Prism;
 
-})(window.ced);
+})(window.cledit);

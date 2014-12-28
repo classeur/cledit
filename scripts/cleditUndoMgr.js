@@ -1,10 +1,10 @@
 /* jshint -W084, -W099 */
-(function(ced) {
+(function(cledit) {
 
 	function UndoMgr(editor, options) {
-		ced.Utils.createEventHooks(this);
+		cledit.Utils.createEventHooks(this);
 
-		options = ced.Utils.extend({
+		options = cledit.Utils.extend({
 			undoStackMaxSize: 200,
 			bufferStateUntilIdle: 1000
 		}, options || {});
@@ -18,7 +18,7 @@
 		var currentPatches = [];
 		var selectionStartBefore;
 		var selectionEndBefore;
-		var debounce = ced.Utils.debounce;
+		var debounce = cledit.Utils.debounce;
 
 		function State() {
 			this.selectionStartBefore = selectionStartBefore;
@@ -194,6 +194,6 @@
 		};
 	}
 
-	ced.UndoMgr = UndoMgr;
+	cledit.UndoMgr = UndoMgr;
 
-})(window.ced);
+})(window.cledit);

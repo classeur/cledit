@@ -1,4 +1,4 @@
-(function(ced) {
+(function(cledit) {
 
 	function Watcher(editor, listener) {
 		this.isWatching = false;
@@ -26,6 +26,6 @@
 		};
 	}
 
-	ced.Watcher = Watcher;
+	cledit.Watcher = Watcher;
 
-})(window.ced);
+})(window.cledit);

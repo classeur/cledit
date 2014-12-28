@@ -1,4 +1,4 @@
-(function(ced) {
+(function(cledit) {
 
 	var Utils = {};
 
@@ -58,7 +58,7 @@
 			}
 			listeners.push(listener);
 		};
-		object.off = function(listener) {
+		object.off = function(eventType, listener) {
 			var listeners = listenerMap[eventType];
 			if(listeners) {
 				var index = listeners.indexOf(listener);
@@ -89,6 +89,6 @@
 		};
 	})();
 
-	ced.Utils = Utils;
+	cledit.Utils = Utils;
 
-})(window.ced);
+})(window.cledit);

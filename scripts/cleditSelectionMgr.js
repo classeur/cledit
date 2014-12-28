@@ -1,11 +1,11 @@
 /* jshint -W084 */
-(function(ced, rangy) {
+(function(cledit, rangy) {
 
 	function SelectionMgr(editor) {
-		var debounce = ced.Utils.debounce;
+		var debounce = cledit.Utils.debounce;
 		var contentElt = editor.$contentElt;
 		var scrollElt = editor.$scrollElt;
-		ced.Utils.createEventHooks(this);
+		cledit.Utils.createEventHooks(this);
 
 		var self = this;
 		var lastSelectionStart = 0, lastSelectionEnd = 0;
@@ -336,6 +336,6 @@
 		};
 	}
 
-	ced.SelectionMgr = SelectionMgr;
+	cledit.SelectionMgr = SelectionMgr;
 
-})(window.ced, window.rangy);
+})(window.cledit, window.rangy);

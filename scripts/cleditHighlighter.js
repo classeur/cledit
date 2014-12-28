@@ -1,11 +1,11 @@
-(function(ced) {
+(function(cledit) {
 
 	function Highlighter(editor) {
-		var escape = ced.Utils.escape;
+		var escape = cledit.Utils.escape;
 
 		function highlight(section) {
 			var text = escape(section.text);
-			text = ced.Prism.highlight(text, editor.options.language);
+			text = cledit.Prism.highlight(text, editor.options.language);
 			text = text.replace(/\n/gm, '<span>\n</span>');
 			/*
 			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
@@ -170,6 +170,6 @@
 		};
 	}
 
-	ced.Highlighter = Highlighter;
+	cledit.Highlighter = Highlighter;
 
-})(window.ced);
+})(window.cledit);
