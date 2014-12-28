@@ -2,11 +2,14 @@
 (function(ced) {
 
 	function UndoMgr(editor, options) {
+		ced.Utils.createEventHooks(this);
+
 		options = ced.Utils.extend({
 			undoStackMaxSize: 200,
 			bufferStateUntilIdle: 1000
 		}, options || {});
 
+		var self = this;
 		var selectionMgr;
 		var undoStack = [];
 		var redoStack = [];
@@ -16,7 +19,6 @@
 		var selectionStartBefore;
 		var selectionEndBefore;
 		var debounce = ced.Utils.debounce;
-		var onButtonStateChange = ced.Utils.createHook(this, 'onButtonStateChange');
 
 		function State() {
 			this.selectionStartBefore = selectionStartBefore;
@@ -98,7 +100,7 @@
 			saveCurrentPatches();
 			currentState = new State();
 			stateMgr.saveMode();
-			onButtonStateChange();
+			self.$trigger('undoStateChange');
 		});
 
 		this.saveSelectionState = debounce(function() {
@@ -159,7 +161,7 @@
 			selectionStartBefore = selectionStart;
 			selectionEndBefore = selectionEnd;
 			stateMgr.resetMode();
-			onButtonStateChange();
+			self.$trigger('undoStateChange');
 			editor.adjustCursorPosition();
 		}
 

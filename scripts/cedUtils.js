@@ -39,16 +39,33 @@
 			};
 	};
 
-	Utils.createHook = function(object, name) {
-		var listeners = [];
-		object[name] = function(listener) {
+	Utils.createEventHooks = function(object) {
+		var listenerMap = {};
+		object.$trigger = function(eventType) {
+			var listeners = listenerMap[eventType];
+			if(listeners) {
+				var args = Array.prototype.slice.call(arguments, 1);
+				listeners.forEach(function(listener) {
+					listener.apply(object, args);
+				});
+			}
+		};
+		object.on = function(eventType, listener) {
+			var listeners = listenerMap[eventType];
+			if(!listeners) {
+				listeners = [];
+				listenerMap[eventType] = listeners;
+			}
 			listeners.push(listener);
 		};
-		return function() {
-			var args = arguments;
-			listeners.forEach(function(listener) {
-				listener.apply(null, args);
-			});
+		object.off = function(listener) {
+			var listeners = listenerMap[eventType];
+			if(listeners) {
+				var index = listeners.indexOf(listener);
+				if(index > -1) {
+					listeners.splice(index, 1);
+				}
+			}
 		};
 	};
 

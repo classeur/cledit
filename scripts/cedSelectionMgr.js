@@ -5,8 +5,7 @@
 		var debounce = ced.Utils.debounce;
 		var contentElt = editor.$contentElt;
 		var scrollElt = editor.$scrollElt;
-		var onCursorCoordinatesChanged = ced.Utils.createHook(this, 'onCursorCoordinatesChanged');
-		var onSelectionChanged = ced.Utils.createHook(this, 'onSelectionChanged');
+		ced.Utils.createEventHooks(this);
 
 		var self = this;
 		var lastSelectionStart = 0, lastSelectionEnd = 0;
@@ -82,7 +81,7 @@
 			var coordinates = this.getCoordinates(this.selectionEnd, this.selectionEndContainer, this.selectionEndOffset);
 			if(this.cursorY !== coordinates.y) {
 				this.cursorY = coordinates.y;
-				onCursorCoordinatesChanged(coordinates.x, coordinates.y);
+				this.$trigger('cursorCoordinatesChanged', coordinates.x, coordinates.y);
 			}
 			if(adjustScroll) {
 				var adjustTop, adjustBottom;
@@ -108,6 +107,19 @@
 			debouncedUpdateCursorCoordinates();
 		};
 
+		var oldSelectionRange;
+		function checkSelection(selectionRange) {
+			if(!oldSelectionRange ||
+				oldSelectionRange.startContainer !== selectionRange.startContainer ||
+				oldSelectionRange.startOffset !== selectionRange.startOffset ||
+				oldSelectionRange.endContainer !== selectionRange.endContainer ||
+				oldSelectionRange.endOffset !== selectionRange.endOffset
+			) {
+				oldSelectionRange = selectionRange;
+				self.$trigger('selectionChanged', self.selectionStart, self.selectionEnd, selectionRange);
+			}
+		}
+
 		this.restoreSelection = function() {
 			var min = Math.min(this.selectionStart, this.selectionEnd);
 			var max = Math.max(this.selectionStart, this.selectionEnd);
@@ -126,7 +138,7 @@
 			else {
 				selection.setSingleRange(selectionRange, isBackward);
 			}
-			onSelectionChanged(this.selectionStart, this.selectionEnd, selectionRange);
+			checkSelection(selectionRange);
 		};
 
 		var saveLastSelection = debounce(function() {
@@ -198,7 +210,7 @@
 						}
 						else {
 							setSelection(selectionStart, selectionEnd);
-							onSelectionChanged(selectionStart, selectionEnd, selectionRange);
+							checkSelection(selectionRange);
 						}
 						editor.undoMgr.saveSelectionState();
 					}

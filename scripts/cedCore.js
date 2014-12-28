@@ -12,6 +12,7 @@
 			$contentElt: contentElt,
 			$scrollElt: scrollElt || contentElt
 		};
+		ced.Utils.createEventHooks(editor);
 
 		editor.toggleEditable = function(isEditable) {
 			if(isEditable === undefined) {
@@ -23,7 +24,6 @@
 
 		var scrollTop;
 		var textContent = contentElt.textContent;
-		var onContentChanged = ced.Utils.createHook(editor, 'onContentChanged');
 		var debounce = ced.Utils.debounce;
 
 		var highlighter = new ced.Highlighter(editor);
@@ -32,7 +32,7 @@
 		function parseSections(content, isInit) {
 			sectionList = highlighter.parseSections(content, isInit);
 			editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.classeur-editor-section *'));
-			onContentChanged(content, sectionList);
+			editor.$trigger('contentChanged', content, sectionList);
 		}
 
 		// Used to detect editor changes
@@ -352,6 +352,22 @@
 			}
 		}, false);
 
+		// In case of Ctrl/Cmd+A outside the editor element
+		window.addEventListener('keydown', function(evt) {
+			if(
+				evt.which === 17 || // Ctrl
+				evt.which === 91 || // Cmd
+				evt.which === 18 || // Alt
+				evt.which === 16 // Shift
+			) {
+				return;
+			}
+			adjustCursorPosition();
+		});
+
+		// Mouseup can happen outside the editor element
+		window.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
+
 		contentElt.addEventListener('compositionstart', function() {
 			highlighter.isComposing++;
 		}, false);
@@ -361,8 +377,6 @@
 				highlighter.isComposing--;
 			}, 0);
 		}, false);
-
-		contentElt.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
 		contentElt.addEventListener('paste', function(evt) {
 			undoMgr.setCurrentMode('single');
