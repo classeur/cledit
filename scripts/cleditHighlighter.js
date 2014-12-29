@@ -6,7 +6,7 @@
 		function highlight(section) {
 			var text = escape(section.text);
 			text = cledit.Prism.highlight(text, editor.options.language);
-			text = text.replace(/\n/gm, '<span>\n</span>');
+			text = text.replace(/\n/gm, '<span class="lf">\n</span>');
 			/*
 			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
 			 if(frontMatter.length) {
@@ -36,6 +36,7 @@
 
 		this.addTrailingLfElt = function() {
 			this.trailingLfElt = document.createElement('span');
+			this.trailingLfElt.className = 'lf';
 			this.trailingLfElt.textContent = '\n';
 			contentElt.appendChild(this.trailingLfElt);
 		};

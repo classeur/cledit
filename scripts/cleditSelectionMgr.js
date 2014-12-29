@@ -139,6 +139,7 @@
 				selection.setSingleRange(selectionRange, isBackward);
 			}
 			checkSelection(selectionRange);
+			return selectionRange;
 		};
 
 		var saveLastSelection = debounce(function() {
@@ -166,7 +167,7 @@
 
 		this.setSelectionStartEnd = function(start, end) {
 			setSelection(start, end);
-			this.restoreSelection();
+			return this.restoreSelection();
 		};
 
 		this.saveSelectionState = (function() {
