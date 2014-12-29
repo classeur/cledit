@@ -367,6 +367,8 @@
 
 		// Mouseup can happen outside the editor element
 		window.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
+		// This can also provoke selection changes and does not fire mouseup event on Chrome/OSX
+		contentElt.addEventListener('contextmenu', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
 		contentElt.addEventListener('compositionstart', function() {
 			highlighter.isComposing++;
