@@ -1,4 +1,4 @@
-(function(cledit) {
+(function(cledit, document) {
 
 	function Highlighter(editor) {
 		var escape = cledit.Utils.escape;
@@ -16,7 +16,7 @@
 			 text = '<span class="token md">' + frontMatter + '</span>' + text;
 			 }
 			 */
-			var sectionElt = document.createElement('span');
+			var sectionElt = editor.$document.createElement('span');
 			sectionElt.id = 'classeur-editor-section-' + section.id;
 			sectionElt.className = 'classeur-editor-section';
 			sectionElt.generated = true;
@@ -35,7 +35,7 @@
 		var insertBeforeSection;
 
 		this.addTrailingLfElt = function() {
-			this.trailingLfElt = document.createElement('span');
+			this.trailingLfElt = editor.$document.createElement('span');
 			this.trailingLfElt.className = 'lf';
 			this.trailingLfElt.textContent = '\n';
 			contentElt.appendChild(this.trailingLfElt);
@@ -126,7 +126,7 @@
 				return sectionList;
 			}
 
-			var newSectionEltList = document.createDocumentFragment();
+			var newSectionEltList = editor.$document.createDocumentFragment();
 			modifiedSections.forEach(function(section) {
 				highlight(section);
 				newSectionEltList.appendChild(section.elt);

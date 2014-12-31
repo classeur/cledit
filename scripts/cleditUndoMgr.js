@@ -122,16 +122,26 @@
 		function restoreState(patches, selectionStart, selectionEnd, isForward) {
 			// Update editor
 			var content = editor.getContent();
-			patches = isForward ? patches : patches.slice().reverse();
+			patches = isForward ? patches : patches.map(function(patch) {
+				return {
+					insert: !patch.insert,
+					offset: patch.offset,
+					text: patch.text
+				};
+			}).reverse();
 			patches.forEach(function(patch) {
-				if(isForward ^ patch.insert) {
-					content = content.slice(0, patch.offset) + content.slice(patch.offset + patch.text.length);
+				if(patch.insert) {
+					content = content.slice(0, patch.offset) + patch.text + content.slice(patch.offset);
 				}
 				else {
-					content = content.slice(0, patch.offset) + patch.text + content.slice(patch.offset);
+					content = content.slice(0, patch.offset) + content.slice(patch.offset + patch.text.length);
 				}
 			});
 			editor.setContent(content, true);
+			editor.$markers.forEach(function(marker) {
+				patches.forEach(marker.adjustOffset, marker);
+			});
+
 			selectionMgr.setSelectionStartEnd(selectionStart, selectionEnd);
 			selectionMgr.updateCursorCoordinates(true);
 			// TODO

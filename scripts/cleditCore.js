@@ -7,11 +7,14 @@
 	var DIFF_INSERT = 1;
 	var DIFF_EQUAL = 0;
 
-	function cledit(contentElt, scrollElt) {
+	function cledit(contentElt, scrollElt, windowParam) {
 		var editor = {
 			$contentElt: contentElt,
-			$scrollElt: scrollElt || contentElt
+			$scrollElt: scrollElt || contentElt,
+			$window: windowParam || window,
+			$markers: []
 		};
+		editor.$document = editor.$window.document;
 		cledit.Utils.createEventHooks(editor);
 
 		editor.toggleEditable = function(isEditable) {
@@ -80,14 +83,15 @@
 				return;
 			}
 			range.deleteContents();
-			range.insertNode(document.createTextNode(replacement));
+			range.insertNode(editor.$document.createTextNode(replacement));
 		}
 
-		function setContent(value, noWatch) {
-			var startOffset = diffMatchPatch.diff_commonPrefix(textContent, value);
-			if(startOffset === textContent.length) {
-				startOffset--;
-			}
+		function setContent(value, noWatch, maxStartOffset) {
+			maxStartOffset = maxStartOffset !== undefined && maxStartOffset < textContent.length ? maxStartOffset : textContent.length - 1;
+			var startOffset = Math.min(
+				diffMatchPatch.diff_commonPrefix(textContent, value),
+				maxStartOffset
+			);
 			var endOffset = Math.min(
 				diffMatchPatch.diff_commonSuffix(textContent, value),
 				textContent.length - startOffset,
@@ -138,7 +142,7 @@
 				return false;
 			}
 			range.deleteContents();
-			range.insertNode(document.createTextNode(replacement));
+			range.insertNode(editor.$document.createTextNode(replacement));
 			offset = offset - text.length + replacement.length;
 			selectionMgr.setSelectionStartEnd(offset, offset);
 			selectionMgr.updateCursorCoordinates(true);
@@ -170,8 +174,17 @@
 		 eventMgr.addListener('onCommentsChanged', onComment);
 		 */
 
+		function addMarker(marker) {
+			editor.$markers.indexOf(marker) === -1 && editor.$markers.push(marker);
+		}
+
+		function removeMarker(marker) {
+			var index = editor.$markers.indexOf(marker);
+			index !== -1 && editor.$markers.splice(index, 1);
+		}
+
 		var triggerSpellCheck = debounce(function() {
-			var selection = window.getSelection();
+			var selection = editor.$window.getSelection();
 			if(!selectionMgr.hasFocus || highlighter.isComposing || selectionMgr.selectionStart !== selectionMgr.selectionEnd || !selection.modify) {
 				return;
 			}
@@ -204,6 +217,9 @@
 			undoMgr.addPatches(patches);
 			undoMgr.setDefaultMode('typing');
 
+			editor.$markers.forEach(function(marker) {
+				patches.forEach(marker.adjustOffset, marker);
+			});
 
 			// TODO
 			/*
@@ -252,53 +268,6 @@
 				}
 			});
 			return patches;
-		}
-
-		function adjustCommentOffsets(oldTextContent, newTextContent, discussionList) {
-			if(!discussionList.length) {
-				return;
-			}
-			var changes = diffMatchPatch.diff_main(oldTextContent, newTextContent);
-			var changed = false;
-			var startOffset = 0;
-			changes.forEach(function(change) {
-				var changeType = change[0];
-				var changeText = change[1];
-				if(changeType === 0) {
-					startOffset += changeText.length;
-					return;
-				}
-				var endOffset = startOffset;
-				var diffOffset = changeText.length;
-				if(changeType === -1) {
-					endOffset += diffOffset;
-					diffOffset = -diffOffset;
-				}
-				discussionList.forEach(function(discussion) {
-					// selectionEnd
-					if(discussion.selectionEnd > endOffset) {
-						discussion.selectionEnd += diffOffset;
-						discussion.discussionIndex && (changed = true);
-					}
-					else if(discussion.selectionEnd > startOffset) {
-						discussion.selectionEnd = startOffset;
-						discussion.discussionIndex && (changed = true);
-					}
-					// selectionStart
-					if(discussion.selectionStart >= endOffset) {
-						discussion.selectionStart += diffOffset;
-						discussion.discussionIndex && (changed = true);
-					}
-					else if(discussion.selectionStart > startOffset) {
-						discussion.selectionStart = startOffset;
-						discussion.discussionIndex && (changed = true);
-					}
-				});
-				if(changeType === 1) {
-					startOffset += changeText.length;
-				}
-			});
-			return changed;
 		}
 
 		// See https://gist.github.com/shimondoodkin/1081133
@@ -353,7 +322,7 @@
 		}, false);
 
 		// In case of Ctrl/Cmd+A outside the editor element
-		window.addEventListener('keydown', function(evt) {
+		editor.$window.addEventListener('keydown', function(evt) {
 			if(
 				evt.which === 17 || // Ctrl
 				evt.which === 91 || // Cmd
@@ -366,7 +335,7 @@
 		});
 
 		// Mouseup can happen outside the editor element
-		window.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
+		editor.$window.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 		// This can also provoke selection changes and does not fire mouseup event on Chrome/OSX
 		contentElt.addEventListener('contextmenu', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
@@ -388,7 +357,7 @@
 				data = clipboardData.getData('text/plain');
 			}
 			else {
-				clipboardData = window.clipboardData;
+				clipboardData = editor.$window.clipboardData;
 				data = clipboardData && clipboardData.getData('Text');
 			}
 			if(!data) {
@@ -424,7 +393,7 @@
 			};
 
 			actions[action](state, options || {});
-			setContent(state.before + state.selection + state.after);
+			setContent(state.before + state.selection + state.after, false, min);
 			selectionMgr.setSelectionStartEnd(state.selectionStart, state.selectionEnd);
 		};
 
@@ -507,7 +476,8 @@
 		editor.getContent = getContent;
 		editor.focus = focus;
 		editor.setSelection = setSelection;
-		editor.adjustCommentOffsets = adjustCommentOffsets;
+		editor.addMarker = addMarker;
+		editor.removeMarker = removeMarker;
 
 		editor.init = function(options) {
 			options = cledit.Utils.extend({
@@ -517,7 +487,7 @@
 			}, options || {});
 			editor.options = options;
 
-			if(!(options.sectionDelimiter instanceof RegExp)) {
+			if(options.sectionDelimiter && !(options.sectionDelimiter instanceof RegExp)) {
 				options.sectionDelimiter = new RegExp(options.sectionDelimiter, 'gm');
 			}
 

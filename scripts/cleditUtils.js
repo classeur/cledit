@@ -89,11 +89,6 @@
 		};
 	})();
 
-	function Marker(offset) {
-		this.offset = offset;
-	}
-	Utils.Marker = Marker;
-
 	cledit.Utils = Utils;
 
 })(window.cledit);

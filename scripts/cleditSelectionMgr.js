@@ -21,7 +21,7 @@
 				return result;
 			}
 			var offset = offsetList.shift();
-			var walker = document.createTreeWalker(contentElt, 4, null, false);
+			var walker = editor.$document.createTreeWalker(contentElt, 4, null, false);
 			var text = '';
 			var walkerOffset = 0;
 			while(walker.nextNode()) {
@@ -55,7 +55,7 @@
 		this.createRange = function(start, end) {
 			start = start < 0 ? 0 : start;
 			end = end < 0 ? 0 : end;
-			var range = document.createRange();
+			var range = editor.$document.createRange();
 			var offsetList = [], startIndex, endIndex;
 			if(!isNaN(start)) {
 				offsetList.push(start);
@@ -124,20 +124,9 @@
 			var min = Math.min(this.selectionStart, this.selectionEnd);
 			var max = Math.max(this.selectionStart, this.selectionEnd);
 			var selectionRange = this.createRange(min, max);
-			var selection = rangy.getSelection();
+			var selection = rangy.getSelection(editor.$window);
 			var isBackward = this.selectionStart > this.selectionEnd;
-			if(!isBackward && selection.nativeSelection.setBaseAndExtent) {
-				// Increase performance on webkit
-				selection.nativeSelection.setBaseAndExtent(
-					selectionRange.startContainer,
-					selectionRange.startOffset,
-					selectionRange.endContainer,
-					selectionRange.endOffset
-				);
-			}
-			else {
-				selection.setSingleRange(selectionRange, isBackward);
-			}
+			selection.setSingleRange(selectionRange, isBackward);
 			checkSelection(selectionRange);
 			return selectionRange;
 		};
@@ -174,7 +163,7 @@
 			function save() {
 				var selectionStart = self.selectionStart;
 				var selectionEnd = self.selectionEnd;
-				var selection = rangy.getSelection();
+				var selection = rangy.getSelection(editor.$window);
 				if(selection.rangeCount > 0) {
 					var selectionRange = selection.getRangeAt(0);
 					var node = selectionRange.startContainer;
