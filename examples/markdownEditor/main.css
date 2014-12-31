@@ -1,0 +1,146 @@
+body {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	overflow: auto;
+}
+
+pre {
+	color: rgba(0, 0, 0, 0.73);
+	font-size: 18px;
+	width: 800px;
+	margin: 0 auto;
+	padding-bottom: 200px;
+	font-family: sans-serif;
+	line-height: 1.6;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	word-break: normal;
+}
+
+pre:focus {
+	outline: none;
+}
+
+.code, .pre {
+	color: #2f2f2f;
+	font: normal 1em monospace;
+}
+
+.tag {
+	color: #2f2f2f;
+	font: bold 1em monospace;
+}
+
+.tag .punctuation, .tag .attr-value, .tag .attr-name {
+	font-weight: normal;
+}
+
+.latex, .math {
+	color: #555;
+}
+
+.entity {
+	font: italic 1em monospace;
+	color: #555;
+}
+
+.table {
+	font: normal 1em monospace;
+}
+
+.table * {
+	font-size: 1em;
+}
+
+.comment {
+	color: rgba(85, 85, 85, 0.4);
+}
+
+.keyword {
+	color: #2f2f2f;
+	font-weight: bold;
+}
+
+.code, .img, .imgref, .md-toc {
+	background-color: #eee;
+	border-radius: 4px;
+	padding: 0.15em 0;
+}
+
+.link .md-underlined-text, .linkref .md-underlined-text {
+	color: inherit;
+}
+
+.blockquote {
+	font-weight: 300;
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6 {
+	font-weight: 600;
+}
+
+.h1, .h11 {
+	font-size: 2em;
+}
+
+.h2, .h22 {
+	font-size: 1.5em;
+}
+
+.h3 {
+	font-size: 1.17em;
+}
+
+.h4 {
+	font-size: 1em;
+}
+
+.h5 {
+	font-size: 0.83em;
+}
+
+.h6 {
+	font-size: 0.75em;
+}
+
+.md-hash {
+	color: rgba(85, 85, 85, 0.4);
+}
+
+.md, .hr {
+	color: rgba(85, 85, 85, 0.4);
+	font-style: normal;
+	font-weight: normal;
+}
+
+.em, .em .md {
+	font-style: italic;
+}
+
+.strong, .strong .md {
+	font-weight: bold;
+}
+
+.md-strike-text {
+	text-decoration: line-through;
+}
+
+.url, .email, .md-underlined-text {
+	text-decoration: underline;
+}
+
+.linkdef .url {
+	color: rgba(85, 85, 85, 0.4);
+}
+
+.img, .imgref {
+	padding: 0.2em 0.4em;
+	padding-right: 0;
+}
+
+.md-bang, .md-alt, .md-title {
+	color: rgba(85, 85, 85, 0.4);
+}
