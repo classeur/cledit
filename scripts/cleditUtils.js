@@ -1,9 +1,9 @@
 (function(cledit) {
 
 	var Utils = {
-		isFirefox: navigator.userAgent.toLowerCase().indexOf('firefox') > -1,
+		isGecko: 'MozAppearance' in document.documentElement.style,
 		isWebkit: 'WebkitAppearance' in document.documentElement.style,
-		isMsie: !!/msie|trident|windows phone/i.test(navigator.userAgent)
+		isMsie: 'msTransform' in document.documentElement.style
 	};
 
 	// Faster than setTimeout (see http://dbaron.org/log/20100309-faster-timeouts)

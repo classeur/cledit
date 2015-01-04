@@ -65,21 +65,6 @@
 			selectionMgr.saveSelectionState(true, true, force);
 		}
 
-		function getTextContent(mutations) {
-			watcher.noWatch(function() {
-				highlighter.fixContent(mutations);
-			});
-			//Array.prototype.forEach.call(contentElt.querySelectorAll('.lf'), function(lfElt) {
-			//	lfElt.innerHTML = '<br><span style="display: none">\n</span>';
-			//});
-			var textContent = contentElt.textContent;
-			//if(contentElt.lastChild && contentElt.lastChild === highlighter.trailingLfElt && highlighter.trailingLfElt.textContent.slice(-1) == '\n') {
-			//	textContent = textContent.slice(0, -1);
-			//}
-			textContent = textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
-			return textContent;
-		}
-
 		function replaceContent(selectionStart, selectionEnd, replacement) {
 			var range = selectionMgr.createRange(
 				Math.min(selectionStart, selectionEnd),
@@ -206,16 +191,12 @@
 		}, 10);
 
 		function checkContentChange(mutations) {
-			var newTextContent = getTextContent(mutations);
+			var isSelectionSaved;
+			watcher.noWatch(function() {
+				isSelectionSaved = highlighter.fixContent(mutations);
+			});
+			var newTextContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
 			if(newTextContent && newTextContent == textContent) {
-				// User has removed the empty section
-				if(contentElt.children.length === 0) {
-					contentElt.innerHTML = '';
-					sectionList.forEach(function(section) {
-						contentElt.appendChild(section.elt);
-					});
-					highlighter.addTrailingLfElt();
-				}
 				return;
 			}
 
@@ -238,7 +219,7 @@
 			 }
 			 */
 			textContent = newTextContent;
-			selectionMgr.saveSelectionState();
+			isSelectionSaved || selectionMgr.saveSelectionState();
 			parseSections(textContent);
 			// TODO
 			//updateDiscussionList && eventMgr.onCommentsChanged(fileDesc);

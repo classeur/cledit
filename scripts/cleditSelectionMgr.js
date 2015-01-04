@@ -93,12 +93,12 @@
 			}
 			if(adjustScroll) {
 				var adjustTop, adjustBottom;
-				adjustTop = adjustBottom = scrollElt.offsetHeight / 2 * editor.options.cursorFocusRatio;
+				adjustTop = adjustBottom = scrollElt.clientHeight / 2 * editor.options.cursorFocusRatio;
 				adjustTop = this.adjustTop || adjustTop;
 				adjustBottom = this.adjustBottom || adjustTop;
 				if(adjustTop && adjustBottom) {
 					var cursorMinY = scrollElt.scrollTop + adjustTop;
-					var cursorMaxY = scrollElt.scrollTop + scrollElt.offsetHeight - adjustBottom;
+					var cursorMaxY = scrollElt.scrollTop + scrollElt.clientHeight - adjustBottom;
 					if(this.cursorY < cursorMinY) {
 						scrollElt.scrollTop += this.cursorY - cursorMinY;
 					}
@@ -200,15 +200,12 @@
 							selectionEnd = offset + (selectionRange + '').length;
 						}
 
-						// TODO
-						if(false && selectionStart === selectionEnd && selectionRange.startContainer.textContent == '\n' && selectionRange.startOffset == 1) {
-							// In IE if end of line is selected, offset is wrong
-							// Also, in Firefox cursor can be after the trailingLfNode
+						if(selectionStart === selectionEnd && selectionStart === editor.getContent().length) {
+							// If cursor is after the trailingNode
 							selectionStart = --selectionEnd;
 							self.setSelectionStartEnd(selectionStart, selectionEnd);
 						}
 						else {
-							console.log(selectionStart, selectionEnd, selectionRange.startContainer, selectionRange.startOffset);
 							setSelection(selectionStart, selectionEnd);
 							checkSelection(selectionRange);
 						}

@@ -13,7 +13,7 @@
 		var modifiedSections = [];
 		var insertBeforeSection;
 		var wrapEmptyLines = cledit.Utils.isWebkit;
-		var useBr = cledit.Utils.isFirefox || cledit.Utils.isWebkit;
+		var useBr = cledit.Utils.isGecko || cledit.Utils.isWebkit;
 		var trailingNodeTag = 'div';
 
 		var lfHtml = useBr ?
@@ -21,19 +21,6 @@
 			'<span class="lf">\n</span>';
 
 		this.fixContent = function(mutations) {
-			//console.log(mutations);
-			//var mergedDiv;
-			//if(cledit.Utils.isMsie) {
-			//	mutations.some(function(mutation) {
-			//		if(mutation.type !== 'childList') {
-			//			mergedDiv = false;
-			//			return true;
-			//		}
-			//		if(mutation.addedNodes.length > 0) {
-			//
-			//		}
-			//	});
-			//}
 			if(useBr) {
 				Array.prototype.forEach.call(contentElt.querySelectorAll('.hd-lf'), function(lfElt) {
 					if(!lfElt.previousSibling) {
@@ -55,6 +42,34 @@
 					elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
 				}
 			});
+			if(cledit.Utils.isMsie && editor.getContent() === contentElt.textContent) {
+				// In IE, backspace can provoke div merging without any actual text modification
+				var removedSections = [];
+				var addedNode;
+				mutations.forEach(function(mutation) {
+					var node;
+					if(mutation.removedNodes.length === 1) {
+						node = mutation.removedNodes[0];
+						node.section && removedSections.push(node.section);
+					}
+					if(mutation.addedNodes.length === 1) {
+						addedNode = mutation.addedNodes[0];
+					}
+				});
+				if(addedNode && removedSections.length === 2) {
+					var index1 = sectionList.indexOf(removedSections[0]);
+					var index2 = sectionList.indexOf(removedSections[1]);
+					var firstSection = sectionList[Math.min(index1, index2)];
+					var secondSection = sectionList[Math.max(index1, index2)];
+					if(firstSection.text.slice(-1) === '\n') {
+						editor.selectionMgr.saveSelectionState();
+						addedNode.textContent = firstSection.text.slice(0, -1) + secondSection.text;
+						editor.selectionMgr.selectionStart--;
+						editor.selectionMgr.selectionEnd--;
+						return true;
+					}
+				}
+			}
 		};
 
 		this.addTrailingNode = function() {
