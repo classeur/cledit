@@ -1,28 +1,7 @@
-(function(cledit, document) {
+(function(cledit) {
 
 	function Highlighter(editor) {
 		var escape = cledit.Utils.escape;
-
-		function highlight(section) {
-			var text = escape(section.text);
-			text = cledit.Prism.highlight(text, editor.options.language);
-			text = text.replace(/\n/gm, '<span class="lf">\n</span>');
-			/*
-			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
-			 if(frontMatter.length) {
-			 // Front matter highlighting
-			 frontMatter = escape(frontMatter);
-			 frontMatter = frontMatter.replace(/\n/g, '<span class="token lf">\n</span>');
-			 text = '<span class="token md">' + frontMatter + '</span>' + text;
-			 }
-			 */
-			var sectionElt = editor.$document.createElement('span');
-			sectionElt.id = 'classeur-editor-section-' + section.id;
-			sectionElt.className = 'classeur-editor-section';
-			sectionElt.generated = true;
-			sectionElt.innerHTML = text;
-			section.elt = sectionElt;
-		}
 
 		var contentElt = editor.$contentElt;
 		var sectionCounter = 0;
@@ -33,12 +12,64 @@
 		var sectionsToRemove = [];
 		var modifiedSections = [];
 		var insertBeforeSection;
+		var wrapEmptyLines = cledit.Utils.isWebkit;
+		var useBr = cledit.Utils.isFirefox || cledit.Utils.isWebkit;
+		var trailingNodeTag = 'div';
 
-		this.addTrailingLfElt = function() {
-			this.trailingLfElt = editor.$document.createElement('span');
-			this.trailingLfElt.className = 'lf';
-			this.trailingLfElt.textContent = '\n';
-			contentElt.appendChild(this.trailingLfElt);
+		var lfHtml = useBr ?
+			'<span class="lf"><br><span class="hd-lf" style="display: none">\n</span></span>' :
+			'<span class="lf">\n</span>';
+
+		this.fixContent = function(mutations) {
+			//console.log(mutations);
+			//var mergedDiv;
+			//if(cledit.Utils.isMsie) {
+			//	mutations.some(function(mutation) {
+			//		if(mutation.type !== 'childList') {
+			//			mergedDiv = false;
+			//			return true;
+			//		}
+			//		if(mutation.addedNodes.length > 0) {
+			//
+			//		}
+			//	});
+			//}
+			if(useBr) {
+				Array.prototype.forEach.call(contentElt.querySelectorAll('.hd-lf'), function(lfElt) {
+					if(!lfElt.previousSibling) {
+						lfElt.parentNode.removeChild(lfElt);
+					}
+				});
+				Array.prototype.forEach.call(contentElt.querySelectorAll('br'), function(brElt) {
+					if(!brElt.nextSibling) {
+						var lfElt = editor.$document.createElement('span');
+						lfElt.className = 'hidden-lf';
+						lfElt.textContent = '\n';
+						lfElt.style.display = 'none';
+						brElt.parentNode.appendChild(lfElt);
+					}
+				});
+			}
+			wrapEmptyLines && Array.prototype.forEach.call(contentElt.querySelectorAll('div'), function(elt) {
+				if(elt.previousSibling && elt.previousSibling.textContent && elt.previousSibling.textContent.slice(-1) !== '\n') {
+					elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
+				}
+			});
+		};
+
+		this.addTrailingNode = function() {
+			this.trailingNode = editor.$document.createElement(trailingNodeTag);
+			contentElt.appendChild(this.trailingNode);
+		};
+
+		function Section(text) {
+			this.id = ++sectionCounter;
+			this.text = text;
+		}
+
+		Section.prototype.setElement = function(elt) {
+			this.elt = elt;
+			elt.section = this;
 		};
 
 		this.parseSections = function(content, isInit) {
@@ -48,10 +79,7 @@
 
 			function addSection(startOffset, endOffset) {
 				var sectionText = tmpText.substring(offset, endOffset);
-				newSectionList.push({
-					id: ++sectionCounter,
-					text: sectionText
-				});
+				newSectionList.push(new Section(sectionText));
 			}
 
 			// Look for delimiters
@@ -135,7 +163,7 @@
 				if(isInit) {
 					contentElt.innerHTML = '';
 					contentElt.appendChild(newSectionEltList);
-					return this.addTrailingLfElt();
+					return this.addTrailingNode();
 				}
 
 				// Remove outdated sections
@@ -143,7 +171,7 @@
 					// section may be already removed
 					section.elt.parentNode === contentElt && contentElt.removeChild(section.elt);
 					// To detect sections that come back with built-in undo
-					section.elt.generated = false;
+					section.elt.section = undefined;
 				});
 
 				if(insertBeforeSection !== undefined) {
@@ -157,18 +185,42 @@
 				var childNode = contentElt.firstChild;
 				while(childNode) {
 					var nextNode = childNode.nextSibling;
-					if(!childNode.generated) {
+					if(!childNode.section) {
 						contentElt.removeChild(childNode);
 					}
 					childNode = nextNode;
 				}
-				this.addTrailingLfElt();
+				this.addTrailingNode();
 				editor.selectionMgr.restoreSelection();
 				editor.selectionMgr.updateCursorCoordinates();
 			}).bind(this));
 
 			return sectionList;
 		};
+
+		function highlight(section) {
+			var text = escape(section.text);
+			text = cledit.Prism.highlight(text, editor.options.language);
+			if(wrapEmptyLines) {
+				text = text.replace(/^\n/gm, '<div>\n</div>');
+			}
+			text = text.replace(/\n/g, lfHtml);
+			/*
+			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
+			 if(frontMatter.length) {
+			 // Front matter highlighting
+			 frontMatter = escape(frontMatter);
+			 frontMatter = frontMatter.replace(/\n/g, '<span class="token lf">\n</span>');
+			 text = '<span class="token md">' + frontMatter + '</span>' + text;
+			 }
+			 */
+			var sectionElt = editor.$document.createElement('div');
+			sectionElt.id = 'classeur-editor-section-' + section.id;
+			sectionElt.className = 'classeur-editor-section';
+			sectionElt.innerHTML = text;
+			section.setElement(sectionElt);
+			//section.addTrailingLf();
+		}
 	}
 
 	cledit.Highlighter = Highlighter;

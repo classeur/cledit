@@ -7,17 +7,20 @@ body {
 	overflow: auto;
 }
 
-pre {
+body > pre {
 	color: rgba(0, 0, 0, 0.73);
 	font-size: 18px;
 	width: 800px;
 	margin: 0 auto;
-	padding-bottom: 200px;
+	padding: 50px 100px 200px;
 	font-family: sans-serif;
-	line-height: 1.6;
 	white-space: pre-wrap;
 	word-wrap: break-word;
 	word-break: normal;
+}
+
+* {
+	line-height: 1.6;
 }
 
 pre:focus {

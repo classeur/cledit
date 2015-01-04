@@ -1,6 +1,10 @@
 (function(cledit) {
 
-	var Utils = {};
+	var Utils = {
+		isFirefox: navigator.userAgent.toLowerCase().indexOf('firefox') > -1,
+		isWebkit: 'WebkitAppearance' in document.documentElement.style,
+		isMsie: !!/msie|trident|windows phone/i.test(navigator.userAgent)
+	};
 
 	// Faster than setTimeout (see http://dbaron.org/log/20100309-faster-timeouts)
 	Utils.defer = (function() {

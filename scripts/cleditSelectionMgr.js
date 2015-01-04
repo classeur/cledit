@@ -21,31 +21,39 @@
 				return result;
 			}
 			var offset = offsetList.shift();
-			var walker = editor.$document.createTreeWalker(contentElt, 4, null, false);
+			var walker = editor.$document.createTreeWalker(contentElt, NodeFilter.SHOW_TEXT, null, false);
 			var text = '';
 			var walkerOffset = 0;
+			var lastNode;
+			function push(container, offsetInContainer, offset) {
+				if(container.nodeValue === '\n') {
+					var hdLfElt = container.parentNode;
+					if(hdLfElt.className === 'hd-lf') {
+						container = hdLfElt.parentNode;
+						offsetInContainer = Array.prototype.indexOf.call(container.childNodes, offsetInContainer === 0 ? hdLfElt.previousSibling : hdLfElt);
+					}
+				}
+				result.push({
+					container: container,
+					offsetInContainer: offsetInContainer,
+					offset: offset
+				});
+			}
 			while(walker.nextNode()) {
 				text = walker.currentNode.nodeValue || '';
 				var newWalkerOffset = walkerOffset + text.length;
 				while(newWalkerOffset > offset) {
-					result.push({
-						container: walker.currentNode,
-						offsetInContainer: offset - walkerOffset,
-						offset: offset
-					});
+					push(walker.currentNode, offset - walkerOffset, offset);
 					if(!offsetList.length) {
 						return result;
 					}
 					offset = offsetList.shift();
 				}
 				walkerOffset = newWalkerOffset;
+				lastNode = walker.currentNode;
 			}
 			do {
-				result.push({
-					container: walker.currentNode,
-					offsetInContainer: text.length,
-					offset: offset
-				});
+				push(walker.currentNode, text.length, offset);
 				offset = offsetList.shift();
 			}
 			while(offset);
@@ -169,7 +177,7 @@
 					var node = selectionRange.startContainer;
 					if((contentElt.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_CONTAINED_BY) || contentElt === node) {
 						var offset = selectionRange.startOffset;
-						if(node.hasChildNodes() && offset > 0) {
+						if(node.firstChild && offset > 0) {
 							node = node.childNodes[offset - 1];
 							offset = node.textContent.length;
 						}
@@ -192,13 +200,15 @@
 							selectionEnd = offset + (selectionRange + '').length;
 						}
 
-						if(selectionStart === selectionEnd && selectionRange.startContainer.textContent == '\n' && selectionRange.startOffset == 1) {
+						// TODO
+						if(false && selectionStart === selectionEnd && selectionRange.startContainer.textContent == '\n' && selectionRange.startOffset == 1) {
 							// In IE if end of line is selected, offset is wrong
 							// Also, in Firefox cursor can be after the trailingLfNode
 							selectionStart = --selectionEnd;
 							self.setSelectionStartEnd(selectionStart, selectionEnd);
 						}
 						else {
+							console.log(selectionStart, selectionEnd, selectionRange.startContainer, selectionRange.startOffset);
 							setSelection(selectionStart, selectionEnd);
 							checkSelection(selectionRange);
 						}

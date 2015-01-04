@@ -2,5 +2,6 @@
     "undef": true,
     "unused": true,
     "browser": true,
+    "node": true,
     "expr": true
 }

@@ -65,11 +65,17 @@
 			selectionMgr.saveSelectionState(true, true, force);
 		}
 
-		function getTextContent() {
+		function getTextContent(mutations) {
+			watcher.noWatch(function() {
+				highlighter.fixContent(mutations);
+			});
+			//Array.prototype.forEach.call(contentElt.querySelectorAll('.lf'), function(lfElt) {
+			//	lfElt.innerHTML = '<br><span style="display: none">\n</span>';
+			//});
 			var textContent = contentElt.textContent;
-			if(contentElt.lastChild && contentElt.lastChild === highlighter.trailingLfElt && highlighter.trailingLfElt.textContent.slice(-1) == '\n') {
-				textContent = textContent.slice(0, -1);
-			}
+			//if(contentElt.lastChild && contentElt.lastChild === highlighter.trailingLfElt && highlighter.trailingLfElt.textContent.slice(-1) == '\n') {
+			//	textContent = textContent.slice(0, -1);
+			//}
 			textContent = textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
 			return textContent;
 		}
@@ -199,9 +205,9 @@
 			}
 		}, 10);
 
-		function checkContentChange() {
-			var newTextContent = getTextContent();
-			if(newTextContent == textContent) {
+		function checkContentChange(mutations) {
+			var newTextContent = getTextContent(mutations);
+			if(newTextContent && newTextContent == textContent) {
 				// User has removed the empty section
 				if(contentElt.children.length === 0) {
 					contentElt.innerHTML = '';
@@ -213,6 +219,7 @@
 				return;
 			}
 
+			newTextContent = newTextContent || '\n';
 			var patches = getPatches(newTextContent);
 			undoMgr.addPatches(patches);
 			undoMgr.setDefaultMode('typing');
