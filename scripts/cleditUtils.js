@@ -50,7 +50,11 @@
 			if(listeners) {
 				var args = Array.prototype.slice.call(arguments, 1);
 				listeners.forEach(function(listener) {
-					listener.apply(object, args);
+					try {
+						listener.apply(object, args);
+					}
+					catch(e) {
+					}
 				});
 			}
 		};

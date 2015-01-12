@@ -12,6 +12,7 @@
 			$contentElt: contentElt,
 			$scrollElt: scrollElt || contentElt,
 			$window: windowParam || window,
+			$keystrokes: {},
 			$markers: []
 		};
 		editor.$document = editor.$window.document;
@@ -32,9 +33,10 @@
 		var highlighter = new cledit.Highlighter(editor);
 
 		var sectionList;
+
 		function parseSections(content, isInit) {
 			sectionList = highlighter.parseSections(content, isInit);
-			editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.classeur-editor-section *'));
+			editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.cledit-section *'));
 			editor.$trigger('contentChanged', content, sectionList);
 		}
 
@@ -146,7 +148,7 @@
 
 		function focus() {
 			selectionMgr.restoreSelection();
-			contentElt.scrollTop = scrollTop;
+			scrollElt.scrollTop = scrollTop;
 		}
 
 		var undoMgr = new cledit.UndoMgr(editor);
@@ -191,16 +193,42 @@
 		}, 10);
 
 		function checkContentChange(mutations) {
+			var removedSections = {};
+			var modifiedSections = {};
+
+			function markModifiedSection(node) {
+				while(node && node !== contentElt) {
+					if(node.section) {
+						(node.parentNode ? modifiedSections : removedSections)[node.section.id] = node.section;
+						return;
+					}
+					node = node.parentNode;
+				}
+			}
+
+			mutations.forEach(function(mutation) {
+				markModifiedSection(mutation.target);
+				Array.prototype.forEach.call(mutation.addedNodes, markModifiedSection);
+				Array.prototype.forEach.call(mutation.removedNodes, markModifiedSection);
+			});
+			removedSections = Object.keys(removedSections).map(function(key) {
+				return removedSections[key];
+			});
+			modifiedSections = Object.keys(modifiedSections).map(function(key) {
+				return modifiedSections[key];
+			});
 			var isSelectionSaved;
 			watcher.noWatch(function() {
-				isSelectionSaved = highlighter.fixContent(mutations);
+				isSelectionSaved = highlighter.fixContent(modifiedSections, removedSections, mutations);
 			});
 			var newTextContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
 			if(newTextContent && newTextContent == textContent) {
 				return;
 			}
 
-			newTextContent = newTextContent || '\n';
+			if(newTextContent.slice(-1) !== '\n') {
+				newTextContent += '\n';
+			}
 			var patches = getPatches(newTextContent);
 			undoMgr.addPatches(patches);
 			undoMgr.setDefaultMode('typing');
@@ -234,7 +262,7 @@
 			changes.forEach(function(change) {
 				var changeType = change[0];
 				var changeText = change[1];
-				switch (changeType) {
+				switch(changeType) {
 					case DIFF_EQUAL:
 						startOffset += changeText.length;
 						break;
@@ -275,52 +303,31 @@
 			selectionMgr.updateCursorCoordinates();
 		}
 
-		var clearNewline = false;
-		contentElt.addEventListener('keydown', function(evt) {
-			if(
-				evt.which === 17 || // Ctrl
-				evt.which === 91 || // Cmd
-				evt.which === 18 || // Alt
-				evt.which === 16 // Shift
-			) {
-				return;
-			}
+		function keydownHandler(handler) {
+			return function(evt) {
+				if(
+					evt.which !== 17 && // Ctrl
+					evt.which !== 91 && // Cmd
+					evt.which !== 18 && // Alt
+					evt.which !== 16 // Shift
+				) {
+					handler(evt);
+				}
+			};
+		}
+
+		contentElt.addEventListener('keydown', keydownHandler(function(evt) {
 			selectionMgr.saveSelectionState();
 			adjustCursorPosition();
-
-			var cmdOrCtrl = evt.metaKey || evt.ctrlKey;
-
-			switch(evt.which) {
-				case 9: // Tab
-					if(!cmdOrCtrl) {
-						action('indent', {
-							inverse: evt.shiftKey
-						});
-						evt.preventDefault();
-					}
-					break;
-				case 13:
-					action('newline');
-					evt.preventDefault();
-					break;
-			}
-			if(evt.which !== 13) {
-				clearNewline = false;
-			}
-		}, false);
+			Object.keys(editor.$keystrokes).some(function(key) {
+				return editor.$keystrokes[key].perform(evt, editor);
+			});
+		}), false);
 
 		// In case of Ctrl/Cmd+A outside the editor element
-		editor.$window.addEventListener('keydown', function(evt) {
-			if(
-				evt.which === 17 || // Ctrl
-				evt.which === 91 || // Cmd
-				evt.which === 18 || // Alt
-				evt.which === 16 // Shift
-			) {
-				return;
-			}
+		editor.$window.addEventListener('keydown', keydownHandler(function() {
 			adjustCursorPosition();
-		});
+		}), false);
 
 		// Mouseup can happen outside the editor element
 		editor.$window.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
@@ -368,89 +375,12 @@
 			selectionMgr.hasFocus = false;
 		}, false);
 
-		var action = function(action, options) {
-			var textContent = getContent();
-			var min = Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd);
-			var max = Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd);
-			var state = {
-				selectionStart: min,
-				selectionEnd: max,
-				before: textContent.slice(0, min),
-				after: textContent.slice(max),
-				selection: textContent.slice(min, max)
-			};
-
-			actions[action](state, options || {});
-			setContent(state.before + state.selection + state.after, false, min);
-			selectionMgr.setSelectionStartEnd(state.selectionStart, state.selectionEnd);
-		};
-
-		var indentRegex = /^ {0,3}>[ ]*|^[ \t]*(?:[*+\-]|(\d+)\.)[ \t]|^\s+/;
-		var actions = {
-			indent: function(state, options) {
-				function strSplice(str, i, remove, add) {
-					remove = +remove || 0;
-					add = add || '';
-					return str.slice(0, i) + add + str.slice(i + remove);
-				}
-
-				var lf = state.before.lastIndexOf('\n') + 1;
-				if(options.inverse) {
-					if(/\s/.test(state.before.charAt(lf))) {
-						state.before = strSplice(state.before, lf, 1);
-
-						state.selectionStart--;
-						state.selectionEnd--;
-					}
-					state.selection = state.selection.replace(/^[ \t]/gm, '');
-				} else {
-					var previousLine = state.before.slice(lf);
-					if(state.selection || previousLine.match(indentRegex)) {
-						state.before = strSplice(state.before, lf, 0, '\t');
-						state.selection = state.selection.replace(/\r?\n(?=[\s\S])/g, '\n\t');
-						state.selectionStart++;
-						state.selectionEnd++;
-					} else {
-						state.before += '\t';
-						state.selectionStart++;
-						state.selectionEnd++;
-						return;
-					}
-				}
-
-				state.selectionEnd = state.selectionStart + state.selection.length;
-			},
-
-			newline: function(state) {
-				var lf = state.before.lastIndexOf('\n') + 1;
-				if(clearNewline) {
-					state.before = state.before.substring(0, lf);
-					state.selection = '';
-					state.selectionStart = lf;
-					state.selectionEnd = lf;
-					clearNewline = false;
-					return;
-				}
-				clearNewline = false;
-				var previousLine = state.before.slice(lf);
-				var indentMatch = previousLine.match(indentRegex);
-				var indent = (indentMatch || [''])[0];
-				if(indentMatch && indentMatch[1]) {
-					var number = parseInt(indentMatch[1], 10);
-					indent = indent.replace(/\d+/, number + 1);
-				}
-				if(indent.length) {
-					clearNewline = true;
-				}
-
-				undoMgr.setCurrentMode('single');
-
-				state.before += '\n' + indent;
-				state.selection = '';
-				state.selectionStart += indent.length + 1;
-				state.selectionEnd = state.selectionStart;
-			}
-		};
+		function addKeystroke(key, keystroke) {
+			editor.$keystrokes[key] = keystroke;
+		}
+		Object.keys(cledit.defaultKeystrokes).forEach(function(key) {
+			addKeystroke(key, cledit.defaultKeystrokes[key]);
+		});
 
 		editor.selectionMgr = selectionMgr;
 		editor.undoMgr = undoMgr;
@@ -464,6 +394,7 @@
 		editor.getContent = getContent;
 		editor.focus = focus;
 		editor.setSelection = setSelection;
+		editor.addKeystroke = addKeystroke;
 		editor.addMarker = addMarker;
 		editor.removeMarker = removeMarker;
 
@@ -475,6 +406,10 @@
 			}, options || {});
 			editor.options = options;
 
+			if(options.content !== undefined) {
+				textContent = options.content;
+			}
+
 			if(options.sectionDelimiter && !(options.sectionDelimiter instanceof RegExp)) {
 				options.sectionDelimiter = new RegExp(options.sectionDelimiter, 'gm');
 			}
@@ -482,7 +417,16 @@
 			undoMgr.init();
 			selectionMgr.saveSelectionState();
 			parseSections(textContent, true);
-			scrollTop = contentElt.scrollTop;
+
+			if(options.selectionStart !== undefined && options.selectionEnd !== undefined) {
+				editor.setSelection(options.selectionStart, options.selectionEnd);
+			}
+
+			if(options.scrollTop !== undefined) {
+				scrollElt.scrollTop = options.scrollTop;
+			}
+
+			scrollTop = scrollElt.scrollTop;
 		};
 
 		return editor;

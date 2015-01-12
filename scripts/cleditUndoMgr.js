@@ -200,7 +200,11 @@
 
 		this.init = function() {
 			selectionMgr = editor.selectionMgr;
-			currentState = currentState || new State();
+			if(!currentState) {
+				selectionStartBefore = selectionMgr.selectionStart;
+				selectionEndBefore = selectionMgr.selectionEnd;
+				currentState = new State();
+			}
 		};
 	}
 

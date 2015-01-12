@@ -2,10 +2,11 @@
 
 	function Highlighter(editor) {
 		var escape = cledit.Utils.escape;
+		var self = this;
+		cledit.Utils.createEventHooks(this);
 
 		var contentElt = editor.$contentElt;
 		var sectionCounter = 0;
-		this.trailingLfElt;
 		this.isComposing = 0;
 
 		var sectionList = [];
@@ -15,50 +16,54 @@
 		var wrapEmptyLines = cledit.Utils.isWebkit;
 		var useBr = cledit.Utils.isGecko || cledit.Utils.isWebkit;
 		var trailingNodeTag = 'div';
+		var hiddenLfInnerHtml = '<br><span class="hd-lf" style="display: none">\n</span>';
 
-		var lfHtml = useBr ?
-			'<span class="lf"><br><span class="hd-lf" style="display: none">\n</span></span>' :
-			'<span class="lf">\n</span>';
+		var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
 
-		this.fixContent = function(mutations) {
-			if(useBr) {
-				Array.prototype.forEach.call(contentElt.querySelectorAll('.hd-lf'), function(lfElt) {
+		this.fixContent = function(modifiedSections, removedSections, mutations) {
+			modifiedSections.forEach(function(section) {
+				section.hiddenLfEltList && Array.prototype.forEach.call(section.hiddenLfEltList, function(lfElt) {
 					if(!lfElt.previousSibling) {
 						lfElt.parentNode.removeChild(lfElt);
 					}
 				});
-				Array.prototype.forEach.call(contentElt.querySelectorAll('br'), function(brElt) {
-					if(!brElt.nextSibling) {
+				section.brEltList && Array.prototype.forEach.call(section.brEltList, function(brElt) {
+					if(brElt.parentNode.className !== 'lf') {
 						var lfElt = editor.$document.createElement('span');
-						lfElt.className = 'hidden-lf';
-						lfElt.textContent = '\n';
-						lfElt.style.display = 'none';
-						brElt.parentNode.appendChild(lfElt);
+						lfElt.innerHTML = hiddenLfInnerHtml;
+						brElt.parentNode.replaceChild(lfElt, brElt);
+					}
+					else if(!brElt.nextSibling) {
+						var hiddenLfElt = editor.$document.createElement('span');
+						hiddenLfElt.className = 'hd-lf';
+						hiddenLfElt.textContent = '\n';
+						hiddenLfElt.style.display = 'none';
+						brElt.parentNode.appendChild(hiddenLfElt);
 					}
 				});
-			}
-			wrapEmptyLines && Array.prototype.forEach.call(contentElt.querySelectorAll('div'), function(elt) {
-				if(elt.previousSibling && elt.previousSibling.textContent && elt.previousSibling.textContent.slice(-1) !== '\n') {
-					elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
-				}
+				section.divEltList && Array.prototype.forEach.call(section.divEltList, function(elt) {
+					if(elt.previousSibling && elt.previousSibling.textContent && elt.previousSibling.textContent.slice(-1) !== '\n') {
+						elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
+					}
+				});
 			});
 			if(cledit.Utils.isMsie && editor.getContent() === contentElt.textContent) {
-				// In IE, backspace can provoke div merging without any actual text modification
-				var removedSections = [];
+				// In IE, backspace can provoke section merging without any actual text modification
+				var mergedSections = [];
 				var addedNode;
 				mutations.forEach(function(mutation) {
 					var node;
 					if(mutation.removedNodes.length === 1) {
 						node = mutation.removedNodes[0];
-						node.section && removedSections.push(node.section);
+						node.section && mergedSections.push(node.section);
 					}
 					if(mutation.addedNodes.length === 1) {
 						addedNode = mutation.addedNodes[0];
 					}
 				});
-				if(addedNode && removedSections.length === 2) {
-					var index1 = sectionList.indexOf(removedSections[0]);
-					var index2 = sectionList.indexOf(removedSections[1]);
+				if(addedNode && mergedSections.length === 2) {
+					var index1 = sectionList.indexOf(mergedSections[0]);
+					var index2 = sectionList.indexOf(mergedSections[1]);
 					var firstSection = sectionList[Math.min(index1, index2)];
 					var secondSection = sectionList[Math.max(index1, index2)];
 					if(firstSection.text.slice(-1) === '\n') {
@@ -70,6 +75,7 @@
 					}
 				}
 			}
+			this.$trigger('domChanged', modifiedSections, removedSections, mutations);
 		};
 
 		this.addTrailingNode = function() {
@@ -85,6 +91,15 @@
 		Section.prototype.setElement = function(elt) {
 			this.elt = elt;
 			elt.section = this;
+
+			// Live collections
+			if(useBr) {
+				this.hiddenLfEltList = elt.getElementsByClassName('hd-lf');
+				this.brEltList = elt.getElementsByTagName('br');
+			}
+			if(wrapEmptyLines) {
+				this.divEltList = elt.getElementsByTagName('div');
+			}
 		};
 
 		this.parseSections = function(content, isInit) {
@@ -230,10 +245,12 @@
 			 }
 			 */
 			var sectionElt = editor.$document.createElement('div');
-			sectionElt.id = 'classeur-editor-section-' + section.id;
-			sectionElt.className = 'classeur-editor-section';
+			sectionElt.id = 'cledit-section-' + section.id;
+			sectionElt.className = 'cledit-section';
 			sectionElt.innerHTML = text;
 			section.setElement(sectionElt);
+			self.$trigger('sectionHighlighted', section);
+
 			//section.addTrailingLf();
 		}
 	}
