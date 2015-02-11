@@ -28,7 +28,7 @@
 			function push(container, offsetInContainer, offset) {
 				if(container.nodeValue === '\n') {
 					var hdLfElt = container.parentNode;
-					if(hdLfElt.className === 'hd-lf') {
+					if(hdLfElt.className === 'hd-lf' && hdLfElt.previousSibling && hdLfElt.previousSibling.tagName === 'BR') {
 						container = hdLfElt.parentNode;
 						offsetInContainer = Array.prototype.indexOf.call(container.childNodes, offsetInContainer === 0 ? hdLfElt.previousSibling : hdLfElt);
 					}
@@ -285,7 +285,7 @@
 					offset: inputOffset
 				};
 				if(inputOffset > 0 && (selectedChar === undefined || selectedChar == '\n')) {
-					if(startOffset.offset === 0) {
+					if(startOffset.offsetInContainer === 0) {
 						// Need to calculate offset-1
 						startOffset = inputOffset - 1;
 					}

@@ -10,8 +10,6 @@
 		this.isComposing = 0;
 
 		var sectionList = [];
-		var sectionsToRemove = [];
-		var modifiedSections = [];
 		var insertBeforeSection;
 		var wrapEmptyLines = cledit.Utils.isWebkit;
 		var useBr = cledit.Utils.isGecko || cledit.Utils.isWebkit;
@@ -46,6 +44,9 @@
 						elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
 					}
 				});
+				if(section.elt.textContent.slice(-1) !== '\n') {
+					section.elt.appendChild(editor.$document.createTextNode('\n'));
+				}
 			});
 			if(cledit.Utils.isMsie && editor.getContent() === contentElt.textContent) {
 				// In IE, backspace can provoke section merging without any actual text modification
@@ -103,6 +104,10 @@
 		};
 
 		this.parseSections = function(content, isInit) {
+			if(this.isComposing) {
+				return sectionList;
+			}
+
 			var tmpText = content + "\n\n";
 			var newSectionList = [];
 			var offset = 0;
@@ -122,8 +127,8 @@
 			// Last section
 			addSection(offset, content.length);
 
-			modifiedSections = [];
-			sectionsToRemove = [];
+			var modifiedSections = [];
+			var sectionsToRemove = [];
 			insertBeforeSection = undefined;
 
 			if(isInit) {
@@ -178,10 +183,6 @@
 				insertBeforeSection = rightSections[0];
 				sectionsToRemove = sectionList.slice(leftIndex, sectionList.length + rightIndex);
 				sectionList = leftSections.concat(modifiedSections).concat(rightSections);
-			}
-
-			if(this.isComposing) {
-				return sectionList;
 			}
 
 			var newSectionEltList = editor.$document.createDocumentFragment();
