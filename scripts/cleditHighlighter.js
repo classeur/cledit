@@ -14,25 +14,25 @@
 		var wrapEmptyLines = cledit.Utils.isWebkit;
 		var useBr = cledit.Utils.isGecko || cledit.Utils.isWebkit;
 		var trailingNodeTag = 'div';
-		var hiddenLfInnerHtml = '<br><span class="hd-lf" style="display: none">\n</span>';
+		var hiddenLfInnerHtml = '<br><i class="hd-lf" style="display: none">\n</i>';
 
-		var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
+		var lfHtml = '<i class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</i>';
 
 		this.fixContent = function(modifiedSections, removedSections, mutations) {
 			modifiedSections.forEach(function(section) {
 				section.hiddenLfEltList && Array.prototype.forEach.call(section.hiddenLfEltList, function(lfElt) {
-					if(!lfElt.previousSibling) {
+					if(!lfElt.previousSibling || lfElt.previousSibling.tagName !== 'BR') {
 						lfElt.parentNode.removeChild(lfElt);
 					}
 				});
 				section.brEltList && Array.prototype.forEach.call(section.brEltList, function(brElt) {
-					if(brElt.parentNode.className !== 'lf') {
-						var lfElt = editor.$document.createElement('span');
+					if(!brElt.parentNode.classList.contains('lf')) {
+						var lfElt = editor.$document.createElement('i');
 						lfElt.innerHTML = hiddenLfInnerHtml;
 						brElt.parentNode.replaceChild(lfElt, brElt);
 					}
 					else if(!brElt.nextSibling) {
-						var hiddenLfElt = editor.$document.createElement('span');
+						var hiddenLfElt = editor.$document.createElement('i');
 						hiddenLfElt.className = 'hd-lf';
 						hiddenLfElt.textContent = '\n';
 						hiddenLfElt.style.display = 'none';
@@ -45,6 +45,7 @@
 					}
 				});
 				if(section.elt.textContent.slice(-1) !== '\n') {
+					// Chrome Android
 					section.elt.appendChild(editor.$document.createTextNode('\n'));
 				}
 			});

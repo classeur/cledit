@@ -68,15 +68,17 @@
 		}
 
 		function replaceContent(selectionStart, selectionEnd, replacement) {
-			var range = selectionMgr.createRange(
-				Math.min(selectionStart, selectionEnd),
-				Math.max(selectionStart, selectionEnd)
-			);
-			if('' + range == replacement) {
+			var min = Math.min(selectionStart, selectionEnd);
+			var max = Math.max(selectionStart, selectionEnd);
+			var range = selectionMgr.createRange(min, max);
+			var rangeText = '' + range;
+			// Range can contain a br element, which is not taken into account in rangeText
+			if(rangeText.length === max - min && rangeText == replacement) {
 				return;
 			}
 			range.deleteContents();
 			range.insertNode(editor.$document.createTextNode(replacement));
+			return range;
 		}
 
 		function setContent(value, noWatch, maxStartOffset) {
