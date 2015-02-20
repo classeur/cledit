@@ -20,12 +20,12 @@
 
 		this.fixContent = function(modifiedSections, removedSections, mutations) {
 			modifiedSections.forEach(function(section) {
-				section.hiddenLfEltList && Array.prototype.forEach.call(section.hiddenLfEltList, function(lfElt) {
+				section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
 					if(!lfElt.previousSibling || lfElt.previousSibling.tagName !== 'BR') {
 						lfElt.parentNode.removeChild(lfElt);
 					}
 				});
-				section.brEltList && Array.prototype.forEach.call(section.brEltList, function(brElt) {
+				section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
 					if(!brElt.parentNode.classList.contains('lf')) {
 						var lfElt = editor.$document.createElement('i');
 						lfElt.innerHTML = hiddenLfInnerHtml;
@@ -39,9 +39,12 @@
 						brElt.parentNode.appendChild(hiddenLfElt);
 					}
 				});
-				section.divEltList && Array.prototype.forEach.call(section.divEltList, function(elt) {
+				section.divEltList && Array.prototype.slice.call(section.divEltList).forEach(function(elt) {
 					if(elt.previousSibling && elt.previousSibling.textContent && elt.previousSibling.textContent.slice(-1) !== '\n') {
 						elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
+					}
+					if(elt.textContent.slice(-1) !== '\n') {
+						elt.appendChild(editor.$document.createTextNode('\n'));
 					}
 				});
 				if(section.elt.textContent.slice(-1) !== '\n') {
