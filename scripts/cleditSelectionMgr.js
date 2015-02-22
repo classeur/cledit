@@ -248,7 +248,7 @@
 		this.getSelectedText = function() {
 			var min = Math.min(this.selectionStart, this.selectionEnd);
 			var max = Math.max(this.selectionStart, this.selectionEnd);
-			return editor.getContent().substring(min, max);
+			return editor.getLastContent().substring(min, max);
 		};
 
 		this.getCoordinates = function(inputOffset, container, offsetInContainer) {

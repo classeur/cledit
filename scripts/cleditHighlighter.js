@@ -52,7 +52,7 @@
 					section.elt.appendChild(editor.$document.createTextNode('\n'));
 				}
 			});
-			if(cledit.Utils.isMsie && editor.getContent() === contentElt.textContent) {
+			if(cledit.Utils.isMsie && editor.getLastContent() === contentElt.textContent) {
 				// In IE, backspace can provoke section merging without any actual text modification
 				var mergedSections = [];
 				var addedNode;

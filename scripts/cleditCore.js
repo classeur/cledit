@@ -17,19 +17,31 @@
 		};
 		editor.$document = editor.$window.document;
 		cledit.Utils.createEventHooks(editor);
+		var scrollTop;
+		var debounce = cledit.Utils.debounce;
 
 		editor.toggleEditable = function(isEditable) {
-			if(isEditable === undefined) {
+			if (isEditable === undefined) {
 				isEditable = !contentElt.contentEditable;
 			}
 			contentElt.contentEditable = isEditable;
 		};
 		editor.toggleEditable(true);
 
-		var scrollTop;
-		var textContent = contentElt.textContent;
-		var debounce = cledit.Utils.debounce;
 
+		function getTextContent() {
+			var textContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
+			if (textContent.slice(-1) !== '\n') {
+				textContent += '\n';
+			}
+			return textContent;
+		}
+
+		function getLastContent() {
+			return lastTextContent;
+		}
+
+		var lastTextContent = getTextContent();
 		var highlighter = new cledit.Highlighter(editor);
 
 		var sectionList;
@@ -73,7 +85,7 @@
 			var range = selectionMgr.createRange(min, max);
 			var rangeText = '' + range;
 			// Range can contain a br element, which is not taken into account in rangeText
-			if(rangeText.length === max - min && rangeText == replacement) {
+			if (rangeText.length === max - min && rangeText == replacement) {
 				return;
 			}
 			range.deleteContents();
@@ -82,6 +94,7 @@
 		}
 
 		function setContent(value, noWatch, maxStartOffset) {
+			var textContent = getTextContent();
 			maxStartOffset = maxStartOffset !== undefined && maxStartOffset < textContent.length ? maxStartOffset : textContent.length - 1;
 			var startOffset = Math.min(
 				diffMatchPatch.diff_commonPrefix(textContent, value),
@@ -93,14 +106,13 @@
 				value.length - startOffset
 			);
 			var replacement = value.substring(startOffset, value.length - endOffset);
-			if(noWatch) {
+			if (noWatch) {
 				watcher.noWatch(function() {
 					replaceContent(startOffset, textContent.length - endOffset, replacement);
 					textContent = value;
 					parseSections(value);
 				});
-			}
-			else {
+			} else {
 				replaceContent(startOffset, textContent.length - endOffset, replacement);
 			}
 			return {
@@ -119,8 +131,9 @@
 
 		function replaceAll(search, replacement) {
 			undoMgr.setDefaultMode('single');
+			var textContent = getTextContent();
 			var value = textContent.replace(search, replacement);
-			if(value != textContent) {
+			if (value != textContent) {
 				var offset = editor.setContent(value);
 				selectionMgr.setSelectionStartEnd(offset.end, offset.end);
 				selectionMgr.updateCursorCoordinates(true);
@@ -129,11 +142,11 @@
 
 		function replacePreviousText(text, replacement) {
 			var offset = selectionMgr.selectionStart;
-			if(offset !== selectionMgr.selectionEnd) {
+			if (offset !== selectionMgr.selectionEnd) {
 				return false;
 			}
 			var range = selectionMgr.createRange(offset - text.length, offset);
-			if('' + range != text) {
+			if ('' + range != text) {
 				return false;
 			}
 			range.deleteContents();
@@ -142,10 +155,6 @@
 			selectionMgr.setSelectionStartEnd(offset, offset);
 			selectionMgr.updateCursorCoordinates(true);
 			return true;
-		}
-
-		function getContent() {
-			return textContent;
 		}
 
 		function focus() {
@@ -180,15 +189,14 @@
 
 		var triggerSpellCheck = debounce(function() {
 			var selection = editor.$window.getSelection();
-			if(!selectionMgr.hasFocus || highlighter.isComposing || selectionMgr.selectionStart !== selectionMgr.selectionEnd || !selection.modify) {
+			if (!selectionMgr.hasFocus || highlighter.isComposing || selectionMgr.selectionStart !== selectionMgr.selectionEnd || !selection.modify) {
 				return;
 			}
 			// Hack for Chrome to trigger the spell checker
-			if(selectionMgr.selectionStart) {
+			if (selectionMgr.selectionStart) {
 				selection.modify("move", "backward", "character");
 				selection.modify("move", "forward", "character");
-			}
-			else {
+			} else {
 				selection.modify("move", "forward", "character");
 				selection.modify("move", "backward", "character");
 			}
@@ -199,8 +207,8 @@
 			var modifiedSections = {};
 
 			function markModifiedSection(node) {
-				while(node && node !== contentElt) {
-					if(node.section) {
+				while (node && node !== contentElt) {
+					if (node.section) {
 						(node.parentNode ? modifiedSections : removedSections)[node.section.id] = node.section;
 						return;
 					}
@@ -223,13 +231,9 @@
 			watcher.noWatch(function() {
 				isSelectionSaved = highlighter.fixContent(modifiedSections, removedSections, mutations);
 			});
-			var newTextContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
-			if(newTextContent && newTextContent == textContent) {
+			var newTextContent = getTextContent();
+			if (newTextContent && newTextContent == lastTextContent) {
 				return;
-			}
-
-			if(newTextContent.slice(-1) !== '\n') {
-				newTextContent += '\n';
 			}
 			var patches = getPatches(newTextContent);
 			undoMgr.addPatches(patches);
@@ -248,9 +252,9 @@
 			 fileDesc.discussionList = fileDesc.discussionList; // Write discussionList in localStorage
 			 }
 			 */
-			textContent = newTextContent;
+			lastTextContent = newTextContent;
 			isSelectionSaved || selectionMgr.saveSelectionState();
-			parseSections(textContent);
+			parseSections(lastTextContent);
 			// TODO
 			//updateDiscussionList && eventMgr.onCommentsChanged(fileDesc);
 			undoMgr.saveState();
@@ -258,13 +262,13 @@
 		}
 
 		function getPatches(newTextContent) {
-			var changes = diffMatchPatch.diff_main(textContent, newTextContent);
+			var changes = diffMatchPatch.diff_main(lastTextContent, newTextContent);
 			var patches = [];
 			var startOffset = 0;
 			changes.forEach(function(change) {
 				var changeType = change[0];
 				var changeText = change[1];
-				switch(changeType) {
+				switch (changeType) {
 					case DIFF_EQUAL:
 						startOffset += changeText.length;
 						break;
@@ -307,7 +311,7 @@
 
 		function keydownHandler(handler) {
 			return function(evt) {
-				if(
+				if (
 					evt.which !== 17 && // Ctrl
 					evt.which !== 91 && // Cmd
 					evt.which !== 18 && // Alt
@@ -350,14 +354,13 @@
 			undoMgr.setCurrentMode('single');
 			evt.preventDefault();
 			var data, clipboardData = evt.clipboardData;
-			if(clipboardData) {
+			if (clipboardData) {
 				data = clipboardData.getData('text/plain');
-			}
-			else {
+			} else {
 				clipboardData = editor.$window.clipboardData;
 				data = clipboardData && clipboardData.getData('Text');
 			}
-			if(!data) {
+			if (!data) {
 				return;
 			}
 			replace(selectionMgr.selectionStart, selectionMgr.selectionEnd, data);
@@ -393,7 +396,8 @@
 		editor.replace = replace;
 		editor.replaceAll = replaceAll;
 		editor.replacePreviousText = replacePreviousText;
-		editor.getContent = getContent;
+		editor.getContent = getTextContent;
+		editor.getLastContent = getLastContent;
 		editor.focus = focus;
 		editor.setSelection = setSelection;
 		editor.addKeystroke = addKeystroke;
@@ -408,23 +412,23 @@
 			}, options || {});
 			editor.options = options;
 
-			if(options.content !== undefined) {
-				textContent = options.content;
+			if (options.content !== undefined) {
+				lastTextContent = options.content;
 			}
 
-			if(options.sectionDelimiter && !(options.sectionDelimiter instanceof RegExp)) {
+			if (options.sectionDelimiter && !(options.sectionDelimiter instanceof RegExp)) {
 				options.sectionDelimiter = new RegExp(options.sectionDelimiter, 'gm');
 			}
 
 			undoMgr.init();
 			selectionMgr.saveSelectionState();
-			parseSections(textContent, true);
+			parseSections(lastTextContent, true);
 
-			if(options.selectionStart !== undefined && options.selectionEnd !== undefined) {
+			if (options.selectionStart !== undefined && options.selectionEnd !== undefined) {
 				editor.setSelection(options.selectionStart, options.selectionEnd);
 			}
 
-			if(options.scrollTop !== undefined) {
+			if (options.scrollTop !== undefined) {
 				scrollElt.scrollTop = options.scrollTop;
 			}
 
@@ -436,4 +440,3 @@
 
 	window.cledit = cledit;
 })(window.diff_match_patch);
-
