@@ -1,19 +1,19 @@
 (function() {
 
-	var charInsideUrl = "(&amp;|[-A-Z0-9+@#/%?=~_|[\\]()!:,.;])",
-		charEndingUrl = "(&amp;|[-A-Z0-9+@#/%=~_|[\\])])";
+	var charInsideUrl = "(&|[-A-Z0-9+@#/%?=~_|[\\]()!:,.;])",
+		charEndingUrl = "(&|[-A-Z0-9+@#/%=~_|[\\])])";
 	var urlPattern = new RegExp("(https?|ftp)(://" + charInsideUrl + "*" + charEndingUrl + ")(?=$|\\W)", "gi");
 	var emailPattern = /(?:mailto:)?([-.\w]+\@[-a-z0-9]+(\.[-a-z0-9]+)*\.[a-z]+)/gi;
 
 	var markup = {
-		'comment': /&lt;!--[\w\W]*?-->/g,
+		'comment': /<!--[\w\W]*?-->/g,
 		'tag': {
-			pattern: /&lt;\/?[\w:-]+\s*(?:\s+[\w:-]+(?:=(?:("|')(\\?[\w\W])*?\1|[^\s'">=]+))?\s*)*\/?>/gi,
+			pattern: /<\/?[\w:-]+\s*(?:\s+[\w:-]+(?:=(?:("|')(\\?[\w\W])*?\1|[^\s'">=]+))?\s*)*\/?>/gi,
 			inside: {
 				'tag': {
-					pattern: /^&lt;\/?[\w:-]+/i,
+					pattern: /^<\/?[\w:-]+/i,
 					inside: {
-						'punctuation': /^&lt;\/?/,
+						'punctuation': /^<\/?/,
 						'namespace': /^[\w-]+?:/
 					}
 				},
@@ -33,7 +33,7 @@
 
 			}
 		},
-		'entity': /&amp;#?[\da-z]{1,8};/gi
+		'entity': /&#?[\da-z]{1,8};/gi
 	};
 
 	var latex = {
@@ -51,12 +51,12 @@
 	window.mdGrammar = function(options) {
 		options = options || {};
 		var md = {};
-		if(options.fcbs) {
+		var insideFcb = options.insideFcb || {};
+		insideFcb["md md-pre"] = /`{3}/;
+		if (options.fcbs) {
 			md['pre gfm'] = {
 				pattern: /^`{3}.*\n(?:[\s\S]*?)\n`{3} *$/gm,
-				inside: {
-					"md md-pre": /`{3}/
-				}
+				inside: insideFcb
 			};
 		}
 		md['h1 alt'] = {
@@ -71,7 +71,7 @@
 				"md md-hash": /-+[ \t]*$/
 			}
 		};
-		for(var i = 6; i >= 1; i--) {
+		for (var i = 6; i >= 1; i--) {
 			md["h" + i] = {
 				pattern: new RegExp("^#{" + i + "}.+$", "gm"),
 				inside: {
@@ -82,20 +82,20 @@
 		md.li = {
 			pattern: /^[ \t]*([*+\-]|\d+\.)[ \t].+(?:\n|[ \t].*\n)*/gm,
 			inside: {
-				"md md-li": /^[ \t]*([*+\-]|\d+\.)[ \t]/m,
-				'pre gfm': {
-					pattern: /^((?: {4}|\t)+)`{3}.*\n(?:[\s\S]*?)\n\1`{3} *$/gm,
-					inside: {
-						"md md-pre": /`{3}/
-					}
-				}
+				"md md-li": /^[ \t]*([*+\-]|\d+\.)[ \t]/m
 			}
 		};
+		if (options.fcbs) {
+			md.li.inside['pre gfm'] = {
+				pattern: /^((?: {4}|\t)+)`{3}.*\n(?:[\s\S]*?)\n\1`{3} *$/gm,
+				inside: insideFcb
+			};
+		}
 		md.pre = {
 			pattern: /(^|(?:^|(?:^|\n)(?![ \t]*([*+\-]|\d+\.)[ \t]).*\n)\s*?\n)(\s*(?: {4}|\t).*(?:\n|$))+/g,
 			lookbehind: true
 		};
-		if(options.tables) {
+		if (options.tables) {
 			md.table = {
 				pattern: new RegExp(
 					[
@@ -110,7 +110,7 @@
 						'(', // $3: Table Body
 						'(?:[ ]*[|].*\\n?)*', // Table rows
 						')',
-						'(?:\\n|$)'                   // Stop at final newline
+						'(?:\\n|$)' // Stop at final newline
 					].join(''),
 					'gm'
 				),
@@ -129,7 +129,7 @@
 						'(', // $3: Table Body
 						'(?:.*[|].*\\n?)*', // Table rows
 						')',
-						'(?:\\n|$)'                   // Stop at final newline
+						'(?:\\n|$)' // Stop at final newline
 					].join(''),
 					'gm'
 				),
@@ -147,7 +147,7 @@
 				"li": md.li
 			}
 		};
-		if(options.maths) {
+		if (options.maths) {
 			md['math block'] = {
 				pattern: /(\$\$|\\\\\[|\\\\\\\\\()[\s\S]*?(\$\$|\\\\\]|\\\\\\\\\))/g,
 				inside: {
@@ -164,7 +164,7 @@
 				}
 			};
 		}
-		if(options.footnotes) {
+		if (options.footnotes) {
 			md.fndef = {
 				pattern: /^ {0,3}\[\^.*?\]:[ \t]+.*$/gm,
 				inside: {
@@ -196,7 +196,7 @@
 			pattern: /.+/g,
 			inside: {}
 		};
-		if(options.toc) {
+		if (options.toc) {
 			md.p.inside['md md-toc'] = /^\s*\[(toc|TOC)\]\s*$/g;
 		}
 		md.img = {
@@ -232,7 +232,7 @@
 				"md md-href": /.*/
 			}
 		};
-		if(options.footnotes) {
+		if (options.footnotes) {
 			md.fn = {
 				pattern: /\[\^(.*?)\]/g,
 				inside: {
@@ -297,7 +297,7 @@
 				"md md-code": /`/
 			}
 		};
-		if(options.maths) {
+		if (options.maths) {
 			md.math = {
 				pattern: /\$.*?\$/g,
 				inside: {
@@ -321,7 +321,7 @@
 				"md md-em md-close": /(\*|_)$/
 			}
 		};
-		if(options.strikes) {
+		if (options.strikes) {
 			md.strike = {
 				pattern: /(^|\n|\W)(~~)(?=\S)([^\r]*?\S)\2/gm,
 				lookbehind: true,
@@ -349,19 +349,19 @@
 			entity: markup.entity
 		};
 
-		for(var c = 6; c >= 1; c--) {
+		for (var c = 6; c >= 1; c--) {
 			md["h" + c].inside.rest = rest;
 		}
 		md["h1 alt"].inside.rest = rest;
 		md["h2 alt"].inside.rest = rest;
-		if(options.tables) {
+		if (options.tables) {
 			md.table.inside.rest = rest;
 			md["table alt"].inside.rest = rest;
 		}
 		md.p.inside.rest = rest;
 		md.blockquote.inside.rest = rest;
 		md.li.inside.rest = rest;
-		if(options.footnotes) {
+		if (options.footnotes) {
 			md.fndef.inside.rest = rest;
 		}
 
@@ -373,7 +373,7 @@
 		};
 		md.strong.inside.rest = rest;
 		md.em.inside.rest = rest;
-		if(options.strikes) {
+		if (options.strikes) {
 			md.strike.inside.rest = rest;
 		}
 

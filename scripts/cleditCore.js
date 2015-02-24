@@ -407,7 +407,9 @@
 		editor.init = function(options) {
 			options = cledit.Utils.extend({
 				cursorFocusRatio: 0.5,
-				language: {},
+				highlighter: function(text) {
+					return text
+				},
 				sectionDelimiter: ''
 			}, options || {});
 			editor.options = options;

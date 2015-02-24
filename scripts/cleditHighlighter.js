@@ -1,7 +1,6 @@
 (function(cledit) {
 
 	function Highlighter(editor) {
-		var escape = cledit.Utils.escape;
 		var self = this;
 		cledit.Utils.createEventHooks(this);
 
@@ -234,12 +233,11 @@
 		};
 
 		function highlight(section) {
-			var text = escape(section.text);
-			text = cledit.Prism.highlight(text, editor.options.language);
+			var html = editor.options.highlighter(section.text);
 			if(wrapEmptyLines) {
-				text = text.replace(/^\n/gm, '<div>\n</div>');
+				html = html.replace(/^\n/gm, '<div>\n</div>');
 			}
-			text = text.replace(/\n/g, lfHtml);
+			html = html.replace(/\n/g, lfHtml);
 			/*
 			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
 			 if(frontMatter.length) {
@@ -252,7 +250,7 @@
 			var sectionElt = editor.$document.createElement('div');
 			sectionElt.id = 'cledit-section-' + section.id;
 			sectionElt.className = 'cledit-section';
-			sectionElt.innerHTML = text;
+			sectionElt.innerHTML = html;
 			section.setElement(sectionElt);
 			self.$trigger('sectionHighlighted', section);
 
