@@ -380,6 +380,10 @@
 			selectionMgr.hasFocus = false;
 		}, false);
 
+		scrollElt.addEventListener('scroll', function() {
+			scrollTop = scrollElt.scrollTop;
+		}, false);
+
 		function addKeystroke(key, keystroke) {
 			editor.$keystrokes[key] = keystroke;
 		}
