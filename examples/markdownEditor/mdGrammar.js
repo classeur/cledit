@@ -299,7 +299,8 @@
 		};
 		if (options.maths) {
 			md.math = {
-				pattern: /\$.*?\$/g,
+				pattern: /([^\d])\$.*?\$(?!\d)/g,
+				lookbehind: true,
 				inside: {
 					"md md-bracket-start": /^\$/,
 					"md md-bracket-end": /\$$/,
