@@ -412,7 +412,7 @@
 			options = cledit.Utils.extend({
 				cursorFocusRatio: 0.5,
 				highlighter: function(text) {
-					return text
+					return text;
 				},
 				sectionDelimiter: ''
 			}, options || {});
@@ -426,13 +426,13 @@
 				options.sectionDelimiter = new RegExp(options.sectionDelimiter, 'gm');
 			}
 
-			undoMgr.init();
-			selectionMgr.saveSelectionState();
 			parseSections(lastTextContent, true);
-
 			if (options.selectionStart !== undefined && options.selectionEnd !== undefined) {
 				editor.setSelection(options.selectionStart, options.selectionEnd);
+			} else {
+				selectionMgr.saveSelectionState();
 			}
+			undoMgr.init();
 
 			if (options.scrollTop !== undefined) {
 				scrollElt.scrollTop = options.scrollTop;
