@@ -65,15 +65,9 @@
 		this.setDefaultMode = stateMgr.setDefaultMode.bind(stateMgr);
 
 		var diffMatchPatch = new diff_match_patch();
-		var contentNotIgnored;
-		var ignoredPatches = [];
 
-		this.addPatches = function(patches) {
-			Array.prototype.push.apply(currentPatches, patches);
-		};
-
-		this.ignorePatches = function(patches) {
-			Array.prototype.push.apply(ignoredPatches, patches);
+		this.addPatch = function(patch) {
+			currentPatches.push(patch);
 		};
 
 		function saveCurrentPatches() {
@@ -110,32 +104,27 @@
 			// Update editor
 			var content = editor.getContent();
 			patches = isForward ? patches : patches.map(function(patch) {
-				return {
-					insert: !patch.insert,
-					offset: patch.offset,
-					text: patch.text
-				};
+				patch = diffMatchPatch.patch_deepCopy(patch);
+				patch.forEach(function(item) {
+					item.diffs.forEach(function(diff) {
+						diff[0] = -diff[0];
+					});
+				});
+				return patch;
 			}).reverse();
-			var selectionBefore = content.length;
-			var selectionAfter = 0;
+
+			var newContent = content;
 			patches.forEach(function(patch) {
-				selectionBefore = Math.min(selectionBefore, patch.offset);
-				selectionAfter = Math.max(selectionAfter, patch.offset + (patch.insert ? patch.text.length : 0));
-				if (patch.insert) {
-					content = content.slice(0, patch.offset) + patch.text + content.slice(patch.offset);
-				} else {
-					content = content.slice(0, patch.offset) + content.slice(patch.offset + patch.text.length);
-				}
+				newContent = diffMatchPatch.patch_apply(patch, newContent)[0];
 			});
-			editor.setContentInternal(content, true);
+			var range = editor.setContentInternal(newContent, true);
+
+			var diffs = diffMatchPatch.diff_main(content, newContent);
 			editor.$markers.forEach(function(marker) {
-				patches.forEach(marker.adjustOffset, marker);
+				marker.adjustOffset(diffs);
 			});
 
-			isForward ?
-				selectionMgr.setSelectionStartEnd(selectionAfter, selectionAfter) :
-				selectionMgr.setSelectionStartEnd(selectionBefore, selectionBefore);
-
+			selectionMgr.setSelectionStartEnd(range.end, range.end);
 			selectionMgr.updateCursorCoordinates(true);
 			// TODO
 			/*
@@ -193,6 +182,7 @@ state.discussionListJSON) {
 		this.init = function() {
 			selectionMgr = editor.selectionMgr;
 			if (!currentState) {
+				contentIgnored = editor.getContent();
 				contentNotIgnored = editor.getContent();
 				currentState = new State();
 			}

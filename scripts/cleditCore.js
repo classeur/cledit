@@ -3,10 +3,6 @@
 
 (function(diff_match_patch) {
 
-	var DIFF_DELETE = -1;
-	var DIFF_INSERT = 1;
-	var DIFF_EQUAL = 0;
-
 	function cledit(contentElt, scrollElt, windowParam) {
 		var editor = {
 			$contentElt: contentElt,
@@ -247,17 +243,15 @@
 			if (newTextContent && newTextContent == lastTextContent) {
 				return;
 			}
-			var patches = getPatches(newTextContent);
-			if(ignorePatches) {
-				undoMgr.ignorePatches(patches);
-			}
-			else {
-				undoMgr.addPatches(patches);
+			var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent);
+			var patch = diffMatchPatch.patch_make(lastTextContent, diffs);
+			if(!ignorePatches) {
+				undoMgr.addPatch(patch);
 				undoMgr.setDefaultMode('typing');
 			}
 
 			editor.$markers.forEach(function(marker) {
-				patches.forEach(marker.adjustOffset, marker);
+				marker.adjustOffset(diffs);
 			});
 
 			// TODO
@@ -277,37 +271,6 @@
 			ignorePatches || undoMgr.saveState();
 			ignorePatches = false;
 			triggerSpellCheck();
-		}
-
-		function getPatches(newTextContent) {
-			var changes = diffMatchPatch.diff_main(lastTextContent, newTextContent);
-			var patches = [];
-			var startOffset = 0;
-			changes.forEach(function(change) {
-				var changeType = change[0];
-				var changeText = change[1];
-				switch (changeType) {
-					case DIFF_EQUAL:
-						startOffset += changeText.length;
-						break;
-					case DIFF_DELETE:
-						patches.push({
-							insert: false,
-							offset: startOffset,
-							text: changeText
-						});
-						break;
-					case DIFF_INSERT:
-						patches.push({
-							insert: true,
-							offset: startOffset,
-							text: changeText
-						});
-						startOffset += changeText.length;
-						break;
-				}
-			});
-			return patches;
 		}
 
 		// See https://gist.github.com/shimondoodkin/1081133
