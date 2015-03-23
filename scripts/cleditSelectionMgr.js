@@ -212,7 +212,6 @@
 							setSelection(selectionStart, selectionEnd);
 							result = checkSelection(selectionRange);
 						}
-						editor.undoMgr.saveSelectionState();
 					}
 				}
 				return result;

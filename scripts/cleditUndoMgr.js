@@ -1,5 +1,5 @@
 /* jshint -W084, -W099 */
-(function(cledit) {
+(function(cledit, diff_match_patch) {
 
 	function UndoMgr(editor, options) {
 		cledit.Utils.createEventHooks(this);
@@ -16,16 +16,9 @@
 		var currentState;
 		var previousPatches = [];
 		var currentPatches = [];
-		var selectionStartBefore;
-		var selectionEndBefore;
 		var debounce = cledit.Utils.debounce;
 
-		function State() {
-			this.selectionStartBefore = selectionStartBefore;
-			this.selectionEndBefore = selectionEndBefore;
-			this.selectionStartAfter = selectionMgr.selectionStart;
-			this.selectionEndAfter = selectionMgr.selectionEnd;
-		}
+		function State() {}
 
 		function addToStack(stack) {
 			return function() {
@@ -71,44 +64,16 @@
 		};
 		this.setDefaultMode = stateMgr.setDefaultMode.bind(stateMgr);
 
+		var diffMatchPatch = new diff_match_patch();
+		var contentNotIgnored;
+		var ignoredPatches = [];
+
 		this.addPatches = function(patches) {
 			Array.prototype.push.apply(currentPatches, patches);
 		};
 
 		this.ignorePatches = function(patches) {
-			patches.forEach(function(patchToIgnore) {
-				function adjustOffset(object, key, isBackward) {
-					if(object[key] >= patchToIgnore.offset) {
-						if(patchToIgnore.insert ^ isBackward) {
-							object[key] += patchToIgnore.text.length;
-						}
-						else {
-							object[key] -= patchToIgnore.text.length;
-						}
-					}
-				}
-				function adjustPatches(patches, isBackward) {
-					patches.forEach(function(patchToAdjust) {
-						adjustOffset(patchToAdjust, 'offset', isBackward);
-					});
-				}
-				function adjustState(state, doPatches, isBackward) {
-					adjustOffset(state, 'selectionStartBefore', isBackward);
-					adjustOffset(state, 'selectionEndBefore', isBackward);
-					adjustOffset(state, 'selectionStartAfter', isBackward);
-					adjustOffset(state, 'selectionEndAfter', isBackward);
-					state.patches && doPatches && adjustPatches(state.patches, isBackward);
-				}
-				adjustPatches(currentPatches);
-				adjustPatches(previousPatches);
-				adjustState(currentState, currentState !== previousPatches);
-				undoStack.forEach(function(state) {
-					adjustState(state, true);
-				});
-				redoStack.forEach(function(state) {
-					adjustState(state, true);
-				});
-			});
+			Array.prototype.push.apply(ignoredPatches, patches);
 		};
 
 		function saveCurrentPatches() {
@@ -119,17 +84,11 @@
 
 		this.saveState = debounce(function() {
 			redoStack.length = 0;
-			if(stateMgr.isBufferState()) {
-				// Restore selectionBefore that has potentially been modified by saveSelectionState
-				selectionStartBefore = currentState.selectionStartBefore;
-				selectionEndBefore = currentState.selectionEndBefore;
-			}
-			else {
-				// Save current state
+			if (!stateMgr.isBufferState()) {
 				currentState.addToUndoStack();
 
 				// Limit the size of the stack
-				while(undoStack.length > options.undoStackMaxSize) {
+				while (undoStack.length > options.undoStackMaxSize) {
 					undoStack.shift();
 				}
 			}
@@ -139,14 +98,6 @@
 			self.$trigger('undoStateChange');
 		});
 
-		this.saveSelectionState = debounce(function() {
-			// Supposed to happen right after saveState
-			if(stateMgr.currentMode === undefined) {
-				selectionStartBefore = selectionMgr.selectionStart;
-				selectionEndBefore = selectionMgr.selectionEnd;
-			}
-		}, 50);
-
 		this.canUndo = function() {
 			return !!undoStack.length;
 		};
@@ -155,7 +106,7 @@
 			return !!redoStack.length;
 		};
 
-		function restoreState(patches, selectionStart, selectionEnd, isForward) {
+		function restoreState(patches, isForward) {
 			// Update editor
 			var content = editor.getContent();
 			patches = isForward ? patches : patches.map(function(patch) {
@@ -165,11 +116,14 @@
 					text: patch.text
 				};
 			}).reverse();
+			var selectionBefore = content.length;
+			var selectionAfter = 0;
 			patches.forEach(function(patch) {
-				if(patch.insert) {
+				selectionBefore = Math.min(selectionBefore, patch.offset);
+				selectionAfter = Math.max(selectionAfter, patch.offset + (patch.insert ? patch.text.length : 0));
+				if (patch.insert) {
 					content = content.slice(0, patch.offset) + patch.text + content.slice(patch.offset);
-				}
-				else {
+				} else {
 					content = content.slice(0, patch.offset) + content.slice(patch.offset + patch.text.length);
 				}
 			});
@@ -178,12 +132,16 @@
 				patches.forEach(marker.adjustOffset, marker);
 			});
 
-			selectionMgr.setSelectionStartEnd(selectionStart, selectionEnd);
+			isForward ?
+				selectionMgr.setSelectionStartEnd(selectionAfter, selectionAfter) :
+				selectionMgr.setSelectionStartEnd(selectionBefore, selectionBefore);
+
 			selectionMgr.updateCursorCoordinates(true);
 			// TODO
 			/*
 			 var discussionListJSON = fileDesc.discussionListJSON;
-			 if(discussionListJSON != state.discussionListJSON) {
+			 if(discussionListJSON !=
+state.discussionListJSON) {
 			 var oldDiscussionList = fileDesc.discussionList;
 			 fileDesc.discussionListJSON = state.discussionListJSON;
 			 var newDiscussionList = fileDesc.discussionList;
@@ -204,8 +162,6 @@
 			 }
 			 */
 
-			selectionStartBefore = selectionStart;
-			selectionEndBefore = selectionEnd;
 			stateMgr.resetMode();
 			self.$trigger('undoStateChange');
 			editor.adjustCursorPosition();
@@ -213,32 +169,31 @@
 
 		this.undo = function() {
 			var state = undoStack.pop();
-			if(!state) {
+			if (!state) {
 				return;
 			}
 			saveCurrentPatches();
 			currentState.addToRedoStack();
-			restoreState(currentState.patches, currentState.selectionStartBefore, currentState.selectionEndBefore);
+			restoreState(currentState.patches);
 			previousPatches = state.patches;
 			currentState = state;
 		};
 
 		this.redo = function() {
 			var state = redoStack.pop();
-			if(!state) {
+			if (!state) {
 				return;
 			}
 			currentState.addToUndoStack();
-			restoreState(state.patches, state.selectionStartAfter, state.selectionEndAfter, true);
+			restoreState(state.patches, true);
 			previousPatches = state.patches;
 			currentState = state;
 		};
 
 		this.init = function() {
 			selectionMgr = editor.selectionMgr;
-			if(!currentState) {
-				selectionStartBefore = selectionMgr.selectionStart;
-				selectionEndBefore = selectionMgr.selectionEnd;
+			if (!currentState) {
+				contentNotIgnored = editor.getContent();
 				currentState = new State();
 			}
 		};
@@ -246,4 +201,4 @@
 
 	cledit.UndoMgr = UndoMgr;
 
-})(window.cledit);
+})(window.cledit, window.diff_match_patch);
