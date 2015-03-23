@@ -75,6 +75,42 @@
 			Array.prototype.push.apply(currentPatches, patches);
 		};
 
+		this.ignorePatches = function(patches) {
+			patches.forEach(function(patchToIgnore) {
+				function adjustOffset(object, key, isBackward) {
+					if(object[key] >= patchToIgnore.offset) {
+						if(patchToIgnore.insert ^ isBackward) {
+							object[key] += patchToIgnore.text.length;
+						}
+						else {
+							object[key] -= patchToIgnore.text.length;
+						}
+					}
+				}
+				function adjustPatches(patches, isBackward) {
+					patches.forEach(function(patchToAdjust) {
+						adjustOffset(patchToAdjust, 'offset', isBackward);
+					});
+				}
+				function adjustState(state, doPatches, isBackward) {
+					adjustOffset(state, 'selectionStartBefore', isBackward);
+					adjustOffset(state, 'selectionEndBefore', isBackward);
+					adjustOffset(state, 'selectionStartAfter', isBackward);
+					adjustOffset(state, 'selectionEndAfter', isBackward);
+					state.patches && doPatches && adjustPatches(state.patches, isBackward);
+				}
+				adjustPatches(currentPatches);
+				adjustPatches(previousPatches);
+				adjustState(currentState, currentState !== previousPatches);
+				undoStack.forEach(function(state) {
+					adjustState(state, true);
+				});
+				redoStack.forEach(function(state) {
+					adjustState(state, true);
+				});
+			});
+		};
+
 		function saveCurrentPatches() {
 			// Move currentPatches into previousPatches
 			Array.prototype.push.apply(previousPatches, currentPatches);
@@ -104,7 +140,7 @@
 		});
 
 		this.saveSelectionState = debounce(function() {
-			// Supposed to happen just after saveState
+			// Supposed to happen right after saveState
 			if(stateMgr.currentMode === undefined) {
 				selectionStartBefore = selectionMgr.selectionStart;
 				selectionEndBefore = selectionMgr.selectionEnd;
@@ -137,7 +173,7 @@
 					content = content.slice(0, patch.offset) + content.slice(patch.offset + patch.text.length);
 				}
 			});
-			editor.setContent(content, true);
+			editor.setContentInternal(content, true);
 			editor.$markers.forEach(function(marker) {
 				patches.forEach(marker.adjustOffset, marker);
 			});

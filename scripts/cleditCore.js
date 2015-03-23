@@ -93,7 +93,15 @@
 			return range;
 		}
 
-		function setContent(value, noWatch, maxStartOffset) {
+		var ignorePatches = false;
+
+		function setContent(value, noUndo) {
+			var result = setContentInternal(value);
+			ignorePatches = result.range ? noUndo : false;
+			return result;
+		}
+
+		function setContentInternal(value, noWatch, maxStartOffset) {
 			var textContent = getTextContent();
 			maxStartOffset = maxStartOffset !== undefined && maxStartOffset < textContent.length ? maxStartOffset : textContent.length - 1;
 			var startOffset = Math.min(
@@ -106,18 +114,22 @@
 				value.length - startOffset
 			);
 			var replacement = value.substring(startOffset, value.length - endOffset);
+			var range;
 			if (noWatch) {
 				watcher.noWatch(function() {
-					replaceContent(startOffset, textContent.length - endOffset, replacement);
-					textContent = value;
-					parseSections(value);
+					range = replaceContent(startOffset, textContent.length - endOffset, replacement);
+					if(range) {
+						lastTextContent = value;
+						parseSections(value);
+					}
 				});
 			} else {
-				replaceContent(startOffset, textContent.length - endOffset, replacement);
+				range = replaceContent(startOffset, textContent.length - endOffset, replacement);
 			}
 			return {
 				start: startOffset,
-				end: value.length - endOffset
+				end: value.length - endOffset,
+				range: range
 			};
 		}
 
@@ -134,7 +146,7 @@
 			var textContent = getTextContent();
 			var value = textContent.replace(search, replacement);
 			if (value != textContent) {
-				var offset = editor.setContent(value);
+				var offset = editor.setContentInternal(value);
 				selectionMgr.setSelectionStartEnd(offset.end, offset.end);
 				selectionMgr.updateCursorCoordinates(true);
 			}
@@ -236,8 +248,13 @@
 				return;
 			}
 			var patches = getPatches(newTextContent);
-			undoMgr.addPatches(patches);
-			undoMgr.setDefaultMode('typing');
+			if(ignorePatches) {
+				undoMgr.ignorePatches(patches);
+			}
+			else {
+				undoMgr.addPatches(patches);
+				undoMgr.setDefaultMode('typing');
+			}
 
 			editor.$markers.forEach(function(marker) {
 				patches.forEach(marker.adjustOffset, marker);
@@ -257,7 +274,8 @@
 			parseSections(lastTextContent);
 			// TODO
 			//updateDiscussionList && eventMgr.onCommentsChanged(fileDesc);
-			undoMgr.saveState();
+			ignorePatches || undoMgr.saveState();
+			ignorePatches = false;
 			triggerSpellCheck();
 		}
 
@@ -305,6 +323,7 @@
 		 */
 
 		function setSelection(start, end) {
+			end = end === undefined ? start : end;
 			selectionMgr.setSelectionStartEnd(start, end);
 			selectionMgr.updateCursorCoordinates();
 		}
@@ -397,6 +416,7 @@
 		editor.watcher = watcher;
 		editor.adjustCursorPosition = adjustCursorPosition;
 		editor.setContent = setContent;
+		editor.setContentInternal = setContentInternal;
 		editor.replace = replace;
 		editor.replaceAll = replaceAll;
 		editor.replacePreviousText = replacePreviousText;

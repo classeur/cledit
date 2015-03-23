@@ -42,7 +42,7 @@
 					if(elt.previousSibling && elt.previousSibling.textContent && elt.previousSibling.textContent.slice(-1) !== '\n') {
 						elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
 					}
-					if(elt.textContent.slice(-1) !== '\n') {
+					if(elt.textContent && elt.textContent.slice(-1) !== '\n') {
 						elt.appendChild(editor.$document.createTextNode('\n'));
 					}
 				});

@@ -16,7 +16,7 @@
 			selection: textContent.slice(min, max)
 		};
 		if(this.handler(evt, state, editor)) {
-			editor.setContent(state.before + state.selection + state.after, false, min);
+			editor.setContentInternal(state.before + state.selection + state.after, false, min);
 			editor.selectionMgr.setSelectionStartEnd(state.selectionStart, state.selectionEnd);
 			return true;
 		}
