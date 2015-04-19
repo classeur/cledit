@@ -395,7 +395,7 @@
 			options = cledit.Utils.extend({
 				cursorFocusRatio: 0.5,
 				highlighter: function(text) {
-					return text;
+					return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ');
 				},
 				sectionDelimiter: ''
 			}, options || {});
