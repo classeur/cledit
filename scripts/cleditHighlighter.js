@@ -1,8 +1,21 @@
 (function(cledit) {
 
+	var styleElts = [];
+	function createStyleSheet(document) {
+		var styleElt = document.createElement('style');
+		styleElt.type = 'text/css';
+		styleElt.innerHTML = '.cledit-section * { display: inline; } .cledit-section i { font-style: normal; }';
+		document.head.appendChild(styleElt);
+		styleElts.push(styleElt);
+	}
+
 	function Highlighter(editor) {
 		var self = this;
 		cledit.Utils.createEventHooks(this);
+
+		styleElts.some(function(styleElt) {
+			return editor.$document.head.contains(styleElt);
+		}) || createStyleSheet(editor.$document);
 
 		var contentElt = editor.$contentElt;
 		var sectionCounter = 0;
@@ -10,7 +23,6 @@
 
 		var sectionList = [];
 		var insertBeforeSection;
-		var wrapEmptyLines = cledit.Utils.isWebkit;
 		var useBr = cledit.Utils.isGecko || cledit.Utils.isWebkit;
 		var trailingNodeTag = 'div';
 		var hiddenLfInnerHtml = '<br><i class="hd-lf" style="display: none">\n</i>';
@@ -20,17 +32,16 @@
 		this.fixContent = function(modifiedSections, removedSections, mutations) {
 			modifiedSections.forEach(function(section) {
 				section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
-					if(!lfElt.previousSibling || lfElt.previousSibling.tagName !== 'BR') {
+					if (!lfElt.previousSibling || lfElt.previousSibling.tagName !== 'BR') {
 						lfElt.parentNode.removeChild(lfElt);
 					}
 				});
 				section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
-					if(!brElt.parentNode.classList.contains('lf')) {
+					if (!brElt.parentNode.classList.contains('lf')) {
 						var lfElt = editor.$document.createElement('i');
 						lfElt.innerHTML = hiddenLfInnerHtml;
 						brElt.parentNode.replaceChild(lfElt, brElt);
-					}
-					else if(!brElt.nextSibling) {
+					} else if (!brElt.nextSibling) {
 						var hiddenLfElt = editor.$document.createElement('i');
 						hiddenLfElt.className = 'hd-lf';
 						hiddenLfElt.textContent = '\n';
@@ -38,39 +49,31 @@
 						brElt.parentNode.appendChild(hiddenLfElt);
 					}
 				});
-				section.divEltList && Array.prototype.slice.call(section.divEltList).forEach(function(elt) {
-					if(elt.previousSibling && elt.previousSibling.textContent && elt.previousSibling.textContent.slice(-1) !== '\n') {
-						elt.parentNode.insertBefore(editor.$document.createTextNode('\n'), elt);
-					}
-					if(elt.textContent && elt.textContent.slice(-1) !== '\n') {
-						elt.appendChild(editor.$document.createTextNode('\n'));
-					}
-				});
-				if(section.elt.textContent.slice(-1) !== '\n') {
+				if (section.elt.textContent.slice(-1) !== '\n') {
 					// Chrome Android
 					section.elt.appendChild(editor.$document.createTextNode('\n'));
 				}
 			});
-			if(cledit.Utils.isMsie && editor.getLastContent() === contentElt.textContent) {
+			if (cledit.Utils.isMsie && editor.getLastContent() === contentElt.textContent) {
 				// In IE, backspace can provoke section merging without any actual text modification
 				var mergedSections = [];
 				var addedNode;
 				mutations.forEach(function(mutation) {
 					var node;
-					if(mutation.removedNodes.length === 1) {
+					if (mutation.removedNodes.length === 1) {
 						node = mutation.removedNodes[0];
 						node.section && mergedSections.push(node.section);
 					}
-					if(mutation.addedNodes.length === 1) {
+					if (mutation.addedNodes.length === 1) {
 						addedNode = mutation.addedNodes[0];
 					}
 				});
-				if(addedNode && mergedSections.length === 2) {
+				if (addedNode && mergedSections.length === 2) {
 					var index1 = sectionList.indexOf(mergedSections[0]);
 					var index2 = sectionList.indexOf(mergedSections[1]);
 					var firstSection = sectionList[Math.min(index1, index2)];
 					var secondSection = sectionList[Math.max(index1, index2)];
-					if(firstSection.text.slice(-1) === '\n') {
+					if (firstSection.text.slice(-1) === '\n') {
 						editor.selectionMgr.saveSelectionState();
 						addedNode.textContent = firstSection.text.slice(0, -1) + secondSection.text;
 						editor.selectionMgr.selectionStart--;
@@ -97,17 +100,14 @@
 			elt.section = this;
 
 			// Live collections
-			if(useBr) {
+			if (useBr) {
 				this.hiddenLfEltList = elt.getElementsByClassName('hd-lf');
 				this.brEltList = elt.getElementsByTagName('br');
-			}
-			if(wrapEmptyLines) {
-				this.divEltList = elt.getElementsByTagName('div');
 			}
 		};
 
 		this.parseSections = function(content, isInit) {
-			if(this.isComposing) {
+			if (this.isComposing) {
 				return sectionList;
 			}
 
@@ -134,23 +134,22 @@
 			var sectionsToRemove = [];
 			insertBeforeSection = undefined;
 
-			if(isInit) {
+			if (isInit) {
 				// Render everything if isInit
 				sectionsToRemove = sectionList;
 				sectionList = newSectionList;
 				modifiedSections = newSectionList;
-			}
-			else {
+			} else {
 				// Find modified section starting from top
 				var leftIndex = sectionList.length;
 				sectionList.some(function(section, index) {
 					var newSection = newSectionList[index];
-					if(index >= newSectionList.length ||
-							// Check text modification
+					if (index >= newSectionList.length ||
+						// Check text modification
 						section.text != newSection.text ||
-							// Check that section has not been detached or moved
+						// Check that section has not been detached or moved
 						section.elt.parentNode !== contentElt ||
-							// Check also the content since nodes can be injected in sections via copy/paste
+						// Check also the content since nodes can be injected in sections via copy/paste
 						section.elt.textContent != newSection.text) {
 						leftIndex = index;
 						return true;
@@ -161,19 +160,19 @@
 				var rightIndex = -sectionList.length;
 				sectionList.slice().reverse().some(function(section, index) {
 					var newSection = newSectionList[newSectionList.length - index - 1];
-					if(index >= newSectionList.length ||
-							// Check modified
+					if (index >= newSectionList.length ||
+						// Check modified
 						section.text != newSection.text ||
-							// Check that section has not been detached or moved
+						// Check that section has not been detached or moved
 						section.elt.parentNode !== contentElt ||
-							// Check also the content since nodes can be injected in sections via copy/paste
+						// Check also the content since nodes can be injected in sections via copy/paste
 						section.elt.textContent != newSection.text) {
 						rightIndex = -index;
 						return true;
 					}
 				});
 
-				if(leftIndex - rightIndex > sectionList.length) {
+				if (leftIndex - rightIndex > sectionList.length) {
 					// Prevent overlap
 					rightIndex = leftIndex - sectionList.length;
 				}
@@ -194,7 +193,7 @@
 				newSectionEltList.appendChild(section.elt);
 			});
 			editor.watcher.noWatch((function() {
-				if(isInit) {
+				if (isInit) {
 					contentElt.innerHTML = '';
 					contentElt.appendChild(newSectionEltList);
 					return this.addTrailingNode();
@@ -208,18 +207,17 @@
 					section.elt.section = undefined;
 				});
 
-				if(insertBeforeSection !== undefined) {
+				if (insertBeforeSection !== undefined) {
 					contentElt.insertBefore(newSectionEltList, insertBeforeSection.elt);
-				}
-				else {
+				} else {
 					contentElt.appendChild(newSectionEltList);
 				}
 
 				// Remove unauthorized nodes (text nodes outside of sections or duplicated sections via copy/paste)
 				var childNode = contentElt.firstChild;
-				while(childNode) {
+				while (childNode) {
 					var nextNode = childNode.nextSibling;
-					if(!childNode.section) {
+					if (!childNode.section) {
 						contentElt.removeChild(childNode);
 					}
 					childNode = nextNode;
@@ -233,11 +231,7 @@
 		};
 
 		function highlight(section) {
-			var html = editor.options.highlighter(section.text);
-			if(wrapEmptyLines) {
-				html = html.replace(/^\n/gm, '<div>\n</div>');
-			}
-			html = html.replace(/\n/g, lfHtml);
+			var html = editor.options.highlighter(section.text).replace(/\n/g, lfHtml);
 			/*
 			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
 			 if(frontMatter.length) {
