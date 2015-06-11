@@ -66,8 +66,8 @@
 
 		var diffMatchPatch = new diff_match_patch();
 
-		this.addPatch = function(patch) {
-			currentPatches.push(patch);
+		this.addPatches = function(patches) {
+			currentPatches.push.apply(currentPatches, patches);
 		};
 
 		function saveCurrentPatches() {
@@ -103,20 +103,16 @@
 		function restoreState(patches, isForward) {
 			// Update editor
 			var content = editor.getContent();
-			patches = isForward ? patches : patches.map(function(patch) {
-				patch = diffMatchPatch.patch_deepCopy(patch);
-				patch.forEach(function(item) {
-					item.diffs.forEach(function(diff) {
+			if(!isForward) {
+				patches = diffMatchPatch.patch_deepCopy(patches).reverse();
+				patches.forEach(function(patch) {
+					patch.diffs.forEach(function(diff) {
 						diff[0] = -diff[0];
 					});
 				});
-				return patch;
-			}).reverse();
+			}
 
-			var newContent = content;
-			patches.forEach(function(patch) {
-				newContent = diffMatchPatch.patch_apply(patch, newContent)[0];
-			});
+			var newContent = diffMatchPatch.patch_apply(patches, content)[0];
 			var range = editor.setContentInternal(newContent, true);
 
 			var diffs = diffMatchPatch.diff_main(content, newContent);

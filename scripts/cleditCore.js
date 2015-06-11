@@ -4,9 +4,10 @@
 (function(diff_match_patch) {
 
 	function cledit(contentElt, scrollElt, windowParam) {
+		scrollElt = scrollElt || contentElt;
 		var editor = {
 			$contentElt: contentElt,
-			$scrollElt: scrollElt || contentElt,
+			$scrollElt: scrollElt,
 			$window: windowParam || window,
 			$keystrokes: {},
 			$markers: []
@@ -244,9 +245,9 @@
 				return;
 			}
 			var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent);
-			var patch = diffMatchPatch.patch_make(lastTextContent, diffs);
+			var patches = diffMatchPatch.patch_make(lastTextContent, diffs);
 			if(!ignorePatches) {
-				undoMgr.addPatch(patch);
+				undoMgr.addPatches(patches);
 				undoMgr.setDefaultMode('typing');
 			}
 
