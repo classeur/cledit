@@ -211,6 +211,7 @@
 						} else {
 							setSelection(selectionStart, selectionEnd);
 							result = checkSelection(selectionRange);
+							result = result || lastSelectionStart !== self.selectionStart; // selectionRange doesn't change when selection is at the start of a section
 						}
 					}
 				}
