@@ -16,18 +16,8 @@
 		this.adjustTop = 0;
 		this.adjustBottom = 0;
 
-		this.findOffsets = function(offsetList) {
-			var result = [];
-			if (!offsetList.length) {
-				return result;
-			}
-			var offset = offsetList.shift();
-			var walker = editor.$document.createTreeWalker(contentElt, NodeFilter.SHOW_TEXT, null, false);
-			var text = '';
-			var walkerOffset = 0;
-			var lastNode;
-
-			function push(container, offsetInContainer, offset) {
+		this.findContainer = function(offset) {
+			function makeResult(container, offsetInContainer) {
 				if (container.nodeValue === '\n') {
 					var hdLfElt = container.parentNode;
 					if (hdLfElt.className === 'hd-lf' && hdLfElt.previousSibling && hdLfElt.previousSibling.tagName === 'BR') {
@@ -35,55 +25,45 @@
 						offsetInContainer = Array.prototype.indexOf.call(container.childNodes, offsetInContainer === 0 ? hdLfElt.previousSibling : hdLfElt);
 					}
 				}
-				result.push({
+				return {
 					container: container,
-					offsetInContainer: offsetInContainer,
-					offset: offset
-				});
+					offsetInContainer: offsetInContainer
+				};
 			}
-			while (walker.nextNode()) {
-				text = walker.currentNode.nodeValue || '';
-				var newWalkerOffset = walkerOffset + text.length;
-				while (newWalkerOffset > offset) {
-					push(walker.currentNode, offset - walkerOffset, offset);
-					if (!offsetList.length) {
-						return result;
-					}
-					offset = offsetList.shift();
-				}
-				walkerOffset = newWalkerOffset;
-				lastNode = walker.currentNode;
-			}
+			var containerOffset = 0,
+				container, elt = contentElt;
 			do {
-				push(walker.currentNode, text.length, offset);
-				offset = offsetList.shift();
+				container = elt;
+				elt = elt.firstChild;
+				if (elt) {
+					do {
+						var len = elt.textContent.length;
+						if (containerOffset <= offset && containerOffset + len > offset) {
+							break;
+						}
+						containerOffset += len;
+					} while (elt = elt.nextSibling);
+				}
+			} while (elt && elt.firstChild && elt.nodeType !== 3);
+			if (elt) {
+				return makeResult(elt, offset - containerOffset);
 			}
-			while (offset);
-			return result;
+			while (container.lastChild) {
+				container = container.lastChild;
+			}
+			return makeResult(container, container.nodeType === 3 ? container.textContent.length : 0);
 		};
 
 		this.createRange = function(start, end) {
-			start = start < 0 ? 0 : start;
-			end = end < 0 ? 0 : end;
 			var range = editor.$document.createRange();
-			var offsetList = [],
-				startIndex, endIndex;
-			if (!isNaN(start)) {
-				offsetList.push(start);
-				startIndex = offsetList.length - 1;
+			if (start === end) {
+				end = start = isNaN(start) ? start : this.findContainer(start < 0 ? 0 : start);
+			} else {
+				start = isNaN(start) ? start : this.findContainer(start < 0 ? 0 : start);
+				end = isNaN(end) ? end : this.findContainer(end < 0 ? 0 : end);
 			}
-			if (!isNaN(end)) {
-				offsetList.push(end);
-				endIndex = offsetList.length - 1;
-			}
-			offsetList = this.findOffsets(offsetList);
-			var startOffset = isNaN(start) ? start : offsetList[startIndex];
-			range.setStart(startOffset.container, startOffset.offsetInContainer);
-			var endOffset = startOffset;
-			if (end && end != start) {
-				endOffset = isNaN(end) ? end : offsetList[endIndex];
-			}
-			range.setEnd(endOffset.container, endOffset.offsetInContainer);
+			range.setStart(start.container, start.offsetInContainer);
+			range.setEnd(end.container, end.offsetInContainer);
 			return range;
 		};
 
@@ -255,7 +235,7 @@
 
 		this.getCoordinates = function(inputOffset, container, offsetInContainer) {
 			if (!container) {
-				var offset = this.findOffsets([inputOffset])[0];
+				var offset = this.findContainer(inputOffset);
 				container = offset.container;
 				offsetInContainer = offset.offsetInContainer;
 			}
@@ -277,13 +257,11 @@
 				var selectedChar = editor.getContent()[inputOffset];
 				var startOffset = {
 					container: container,
-					offsetInContainer: offsetInContainer,
-					offset: inputOffset
+					offsetInContainer: offsetInContainer
 				};
 				var endOffset = {
 					container: container,
-					offsetInContainer: offsetInContainer,
-					offset: inputOffset
+					offsetInContainer: offsetInContainer
 				};
 				if (inputOffset > 0 && (selectedChar === undefined || selectedChar == '\n')) {
 					if (startOffset.offsetInContainer === 0) {
