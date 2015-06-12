@@ -116,8 +116,8 @@
 			var range = editor.setContentInternal(newContent, true);
 
 			var diffs = diffMatchPatch.diff_main(content, newContent);
-			editor.$markers.forEach(function(marker) {
-				marker.adjustOffset(diffs);
+			Object.keys(editor.$markers).forEach(function(id) {
+				editor.$markers[id].adjustOffset(diffs);
 			});
 
 			selectionMgr.setSelectionStartEnd(range.end, range.end);
