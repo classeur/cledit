@@ -5,12 +5,13 @@
 	var DIFF_EQUAL = 0;
 
 	function Marker(offset) {
+		this.id = Math.random().toString(36).slice(2);
 		this.offset = offset;
 	}
 
 	Marker.prototype.adjustOffset = function(diffs) {
 		var startOffset = 0;
-		diffs.forEach(function(diff) {
+		diffs.forEach((function(diff) {
 			var diffType = diff[0];
 			var diffText = diff[1];
 			var diffOffset = diffText.length;
@@ -19,19 +20,18 @@
 					startOffset += diffOffset;
 					break;
 				case DIFF_INSERT:
-					if (this.offset >= startOffset) {
+					if (this.offset > startOffset) {
 						this.offset += diffOffset;
 					}
 					startOffset += diffOffset;
 					break;
 				case DIFF_DELETE:
 					if (this.offset > startOffset) {
-						diffOffset = Math.min(diffOffset, this.offset - startOffset);
-						startOffset += diffOffset;
+						this.offset -= diffOffset;
 					}
 					break;
 			}
-		});
+		}).bind(this));
 	};
 
 	cledit.Marker = Marker;

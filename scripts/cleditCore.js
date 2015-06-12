@@ -10,7 +10,7 @@
 			$scrollElt: scrollElt,
 			$window: windowParam || window,
 			$keystrokes: {},
-			$markers: []
+			$markers: {}
 		};
 		editor.$document = editor.$window.document;
 		cledit.Utils.createEventHooks(editor);
@@ -188,12 +188,11 @@
 		 */
 
 		function addMarker(marker) {
-			editor.$markers.indexOf(marker) === -1 && editor.$markers.push(marker);
+			editor.$markers[marker.id] = marker;
 		}
 
 		function removeMarker(marker) {
-			var index = editor.$markers.indexOf(marker);
-			index !== -1 && editor.$markers.splice(index, 1);
+			delete editor.$markers[marker.id];
 		}
 
 		var triggerSpellCheck = debounce(function() {
@@ -251,8 +250,8 @@
 				undoMgr.setDefaultMode('typing');
 			}
 
-			editor.$markers.forEach(function(marker) {
-				marker.adjustOffset(diffs);
+			Object.keys(editor.$markers).forEach(function(id) {
+				editor.$markers[id].adjustOffset(diffs);
 			});
 
 			// TODO
