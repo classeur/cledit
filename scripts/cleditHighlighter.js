@@ -31,12 +31,12 @@
         var lfHtml = '<i class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</i>';
 
         this.fixContent = function(modifiedSections, removedSections, mutations) {
-            useBr && modifiedSections.forEach(function(section) {
+            modifiedSections.forEach(function(section) {
             	section.forceHighlighting = true;
-                Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
+                section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
                     lfElt.parentNode.removeChild(lfElt);
                 });
-                Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
+                section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
                     brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
                 });
                 if (section.elt.textContent.slice(-1) !== '\n') {
@@ -152,6 +152,7 @@
 
             var newSectionEltList = editor.$document.createDocumentFragment();
             modifiedSections.forEach(function(section) {
+                section.forceHighlighting = false;
                 highlight(section);
                 newSectionEltList.appendChild(section.elt);
             });
