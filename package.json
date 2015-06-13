@@ -3,19 +3,15 @@
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
-  "directories": {
-    "example": "examples"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "install": "gulp"
   },
   "author": "Benoit Schweblin",
   "license": "ISC",
-  "devDependencies": {
-    "express": "^4.10.6",
+  "dependencies": {
     "gulp": "^3.8.10",
     "gulp-concat": "^2.5.1",
-    "gulp-uglify": "^1.1.0",
-    "serve-static": "^1.7.2"
+    "gulp-connect": "^2.2.0",
+    "gulp-uglify": "^1.1.0"
   }
 }
