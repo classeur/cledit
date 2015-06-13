@@ -2,7 +2,11 @@
   "name": "cledit",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": false,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/classeur/cledit.git"
+  },
   "scripts": {
     "install": "gulp"
   },
