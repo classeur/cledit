@@ -39,9 +39,6 @@
                 section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
                     brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
                 });
-                if (section.elt.textContent.slice(-1) !== '\n') {
-					section.elt.appendChild(editor.$document.createTextNode('\n'));
-				}
             });
             this.$trigger('domChanged', modifiedSections, removedSections, mutations);
         };

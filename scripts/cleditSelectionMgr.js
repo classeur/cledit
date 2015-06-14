@@ -12,7 +12,7 @@
 			lastSelectionEnd = 0;
 		this.selectionStart = 0;
 		this.selectionEnd = 0;
-		this.cursorY = 0;
+		this.cursorCoordinates = {};
 		this.adjustTop = 0;
 		this.adjustBottom = 0;
 
@@ -70,9 +70,12 @@
 		var adjustScroll;
 		var debouncedUpdateCursorCoordinates = debounce((function() {
 			var coordinates = this.getCoordinates(this.selectionEnd, this.selectionEndContainer, this.selectionEndOffset);
-			if (this.cursorY !== coordinates.y) {
-				this.cursorY = coordinates.y;
-				this.$trigger('cursorCoordinatesChanged', coordinates.x, coordinates.y);
+			if (this.cursorCoordinates.top !== coordinates.top ||
+				this.cursorCoordinates.height !== coordinates.height ||
+				this.cursorCoordinates.left !== coordinates.left
+			) {
+				this.cursorCoordinates = coordinates;
+				this.$trigger('cursorCoordinatesChanged', coordinates);
 			}
 			if (adjustScroll) {
 				var adjustTop, adjustBottom;
@@ -82,10 +85,10 @@
 				if (adjustTop && adjustBottom) {
 					var cursorMinY = scrollElt.scrollTop + adjustTop;
 					var cursorMaxY = scrollElt.scrollTop + scrollElt.clientHeight - adjustBottom;
-					if (this.cursorY < cursorMinY) {
-						scrollElt.scrollTop += this.cursorY - cursorMinY;
-					} else if (this.cursorY > cursorMaxY) {
-						scrollElt.scrollTop += this.cursorY - cursorMaxY;
+					if (this.cursorCoordinates.top < cursorMinY) {
+						scrollElt.scrollTop += this.cursorCoordinates.top - cursorMinY;
+					} else if (this.cursorCoordinates.top + this.cursorCoordinates.height > cursorMaxY) {
+						scrollElt.scrollTop += this.cursorCoordinates.top + this.cursorCoordinates.height - cursorMaxY;
 					}
 				}
 			}
@@ -249,10 +252,12 @@
 				isInvisible = true;
 				containerElt = editor.$allElements[--index];
 			}
-			var x = 0;
-			var y = 0;
 			if (isInvisible || container.textContent == '\n') {
-				y = containerElt.offsetTop + containerElt.offsetHeight / 2;
+				return {
+					top: containerElt.offsetTop,
+					height: containerElt.offsetHeight,
+					left: containerElt.offsetLeft
+				};
 			} else {
 				var selectedChar = editor.getContent()[inputOffset];
 				var startOffset = {
@@ -263,7 +268,9 @@
 					container: container,
 					offsetInContainer: offsetInContainer
 				};
+				var left = 'left';
 				if (inputOffset > 0 && (selectedChar === undefined || selectedChar == '\n')) {
+					left = 'right';
 					if (startOffset.offsetInContainer === 0) {
 						// Need to calculate offset-1
 						startOffset = inputOffset - 1;
@@ -278,14 +285,14 @@
 						endOffset.offsetInContainer += 1;
 					}
 				}
-				var selectionRange = this.createRange(startOffset, endOffset);
-				var selectionRect = selectionRange.getBoundingClientRect();
-				y = selectionRect.top + selectionRect.height / 2 - contentElt.getBoundingClientRect().top + contentElt.scrollTop;
+				var range = this.createRange(startOffset, endOffset);
+				var rect = range.getBoundingClientRect();
+				return {
+					top: rect.top - contentElt.getBoundingClientRect().top + contentElt.scrollTop,
+					height: rect.height,
+					left: rect[left] - contentElt.getBoundingClientRect().left + contentElt.scrollLeft
+				};
 			}
-			return {
-				x: x,
-				y: y
-			};
 		};
 
 		this.getClosestWordOffset = function(offset) {

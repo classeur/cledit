@@ -356,10 +356,12 @@
 
 		contentElt.addEventListener('focus', function() {
 			selectionMgr.hasFocus = true;
+			editor.$trigger('focus');
 		}, false);
 
 		contentElt.addEventListener('blur', function() {
 			selectionMgr.hasFocus = false;
+			editor.$trigger('blur');
 		}, false);
 
 		scrollElt.addEventListener('scroll', function() {
