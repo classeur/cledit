@@ -5,7 +5,7 @@
     function createStyleSheet(document) {
         var styleElt = document.createElement('style');
         styleElt.type = 'text/css';
-        styleElt.innerHTML = '.cledit-section * { display: inline; } .cledit-section i { font-style: normal; }';
+        styleElt.innerHTML = '.cledit-section * { display: inline; }';
         document.head.appendChild(styleElt);
         styleElts.push(styleElt);
     }
@@ -26,9 +26,9 @@
         var insertBeforeSection;
         var useBr = cledit.Utils.isWebkit;
         var trailingNodeTag = 'div';
-        var hiddenLfInnerHtml = '<br><i class="hd-lf" style="display: none">\n</i>';
+        var hiddenLfInnerHtml = '<br><span class="hd-lf" style="display: none">\n</span>';
 
-        var lfHtml = '<i class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</i>';
+        var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
 
         this.fixContent = function(modifiedSections, removedSections, mutations) {
             modifiedSections.forEach(function(section) {
