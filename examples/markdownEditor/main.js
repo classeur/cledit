@@ -1,4 +1,3 @@
-window.rangy.init();
 var editor = window.cledit(
 	document.querySelector('.content'),
 	// Optional (pass a second arg if scrollbar is not on the first arg)

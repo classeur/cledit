@@ -17,5 +17,5 @@ The benefits over ACE/CodeMirror are:
 - Mobile device support
 
 cledit relies on browsers built-in MutationObserver API, so IE11+ is required.  
-cledit requires Google's [DiffMatchPatch library](https://code.google.com/p/google-diff-match-patch/) and [Rangy](https://github.com/timdown/rangy) as dependencies.  
+cledit uses Google's [DiffMatchPatch library](https://code.google.com/p/google-diff-match-patch/) as a dependency.
 Usage examples can be found in the `examples` folder.

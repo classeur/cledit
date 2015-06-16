@@ -1,5 +1,5 @@
 /* jshint -W084 */
-(function(cledit, rangy) {
+(function(cledit) {
 
 	function SelectionMgr(editor) {
 		var debounce = cledit.Utils.debounce;
@@ -119,9 +119,18 @@
 			var min = Math.min(this.selectionStart, this.selectionEnd);
 			var max = Math.max(this.selectionStart, this.selectionEnd);
 			var selectionRange = this.createRange(min, max);
-			var selection = rangy.getSelection(editor.$window);
+			var selection = editor.$window.getSelection();
+			selection.removeAllRanges();
 			var isBackward = this.selectionStart > this.selectionEnd;
-			selection.setSingleRange(selectionRange, isBackward);
+			if (isBackward && selection.extend) {
+				var endRange = selectionRange.cloneRange();
+				endRange.collapse(false);
+				selection.addRange(endRange);
+				selection.extend(selectionRange.startContainer, selectionRange.startOffset);
+			}
+			else {
+				selection.addRange(selectionRange);
+			}
 			checkSelection(selectionRange);
 			return selectionRange;
 		};
@@ -154,11 +163,96 @@
 			return this.restoreSelection();
 		};
 
+		function arrayContains(arr, val) {
+			var i = arr.length;
+			while (i--) {
+				if (arr[i] === val) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		function getClosestAncestorIn(node, ancestor, selfIsAncestor) {
+			var p, n = selfIsAncestor ? node : node.parentNode;
+			while (n) {
+				p = n.parentNode;
+				if (p === ancestor) {
+					return n;
+				}
+				n = p;
+			}
+			return null;
+		}
+
+		function getNodeIndex(node) {
+			var i = 0;
+			while ((node = node.previousSibling)) {
+				++i;
+			}
+			return i;
+		}
+
+		function getCommonAncestor(node1, node2) {
+			var ancestors = [],
+				n;
+			for (n = node1; n; n = n.parentNode) {
+				ancestors.push(n);
+			}
+
+			for (n = node2; n; n = n.parentNode) {
+				if (arrayContains(ancestors, n)) {
+					return n;
+				}
+			}
+
+			return null;
+		}
+
+		function comparePoints(nodeA, offsetA, nodeB, offsetB) {
+			// See http://www.w3.org/TR/DOM-Level-2-Traversal-Range/ranges.html#Level-2-Range-Comparing
+			var nodeC, root, childA, childB, n;
+			if (nodeA == nodeB) {
+				// Case 1: nodes are the same
+				return offsetA === offsetB ? 0 : (offsetA < offsetB) ? -1 : 1;
+			} else if ((nodeC = getClosestAncestorIn(nodeB, nodeA, true))) {
+				// Case 2: node C (container B or an ancestor) is a child node of A
+				return offsetA <= getNodeIndex(nodeC) ? -1 : 1;
+			} else if ((nodeC = getClosestAncestorIn(nodeA, nodeB, true))) {
+				// Case 3: node C (container A or an ancestor) is a child node of B
+				return getNodeIndex(nodeC) < offsetB ? -1 : 1;
+			} else {
+				root = getCommonAncestor(nodeA, nodeB);
+				if (!root) {
+					throw new Error("comparePoints error: nodes have no common ancestor");
+				}
+
+				// Case 4: containers are siblings or descendants of siblings
+				childA = (nodeA === root) ? root : getClosestAncestorIn(nodeA, root, true);
+				childB = (nodeB === root) ? root : getClosestAncestorIn(nodeB, root, true);
+
+				if (childA === childB) {
+					// This shouldn't be possible
+					throw module.createError("comparePoints got to case 4 and childA and childB are the same!");
+				} else {
+					n = root.firstChild;
+					while (n) {
+						if (n === childA) {
+							return -1;
+						} else if (n === childB) {
+							return 1;
+						}
+						n = n.nextSibling;
+					}
+				}
+			}
+		}
+
 		this.saveSelectionState = (function() {
 			function save() {
 				var selectionStart = self.selectionStart;
 				var selectionEnd = self.selectionEnd;
-				var selection = rangy.getSelection(editor.$window);
+				var selection = editor.$window.getSelection();
 				var result;
 				if (selection.rangeCount > 0) {
 					var selectionRange = selection.getRangeAt(0);
@@ -179,7 +273,7 @@
 							node = container = container.parentNode;
 						}
 
-						if (selection.isBackwards()) {
+						if (comparePoints(selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset) == 1) {
 							selectionStart = offset + (selectionRange + '').length;
 							selectionEnd = offset;
 						} else {
@@ -318,4 +412,4 @@
 
 	cledit.SelectionMgr = SelectionMgr;
 
-})(window.cledit, window.rangy);
+})(window.cledit);
