@@ -113,7 +113,7 @@
 			}
 
 			var newContent = diffMatchPatch.patch_apply(patches, content)[0];
-			var range = editor.setContentInternal(newContent, true);
+			var range = editor.setContent(newContent, true);
 
 			var diffs = diffMatchPatch.diff_main(content, newContent);
 			Object.keys(editor.$markers).forEach(function(id) {
@@ -122,30 +122,6 @@
 
 			selectionMgr.setSelectionStartEnd(range.end, range.end);
 			selectionMgr.updateCursorCoordinates(true);
-			// TODO
-			/*
-			 var discussionListJSON = fileDesc.discussionListJSON;
-			 if(discussionListJSON !=
-state.discussionListJSON) {
-			 var oldDiscussionList = fileDesc.discussionList;
-			 fileDesc.discussionListJSON = state.discussionListJSON;
-			 var newDiscussionList = fileDesc.discussionList;
-			 var diff = jsonDiffPatch.diff(oldDiscussionList, newDiscussionList);
-			 var commentsChanged = false;
-			 _.each(diff, function(discussionDiff, discussionIndex) {
-			 if(!_.isArray(discussionDiff)) {
-			 commentsChanged = true;
-			 }
-			 else if(discussionDiff.length === 1) {
-			 eventMgr.onDiscussionCreated(fileDesc, newDiscussionList[discussionIndex]);
-			 }
-			 else {
-			 eventMgr.onDiscussionRemoved(fileDesc, oldDiscussionList[discussionIndex]);
-			 }
-			 });
-			 commentsChanged && eventMgr.onCommentsChanged(fileDesc);
-			 }
-			 */
 
 			stateMgr.resetMode();
 			self.$trigger('undoStateChange');
@@ -178,8 +154,6 @@ state.discussionListJSON) {
 		this.init = function() {
 			selectionMgr = editor.selectionMgr;
 			if (!currentState) {
-				contentIgnored = editor.getContent();
-				contentNotIgnored = editor.getContent();
 				currentState = new State();
 			}
 		};

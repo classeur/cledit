@@ -1,5 +1,4 @@
 /* jshint -W084, -W099 */
-// Credit: http://dabblet.com/
 
 (function(diff_match_patch) {
 
@@ -54,23 +53,7 @@
 		watcher.startWatching();
 
 		var diffMatchPatch = new diff_match_patch();
-		/*
-		 var jsonDiffPatch = jsondiffpatch.create({
-		 objectHash: function(obj) {
-		 return JSON.stringify(obj);
-		 },
-		 arrays: {
-		 detectMove: false
-		 },
-		 textDiff: {
-		 minLength: 9999999
-		 }
-		 });
-		 */
-
 		var selectionMgr = new cledit.SelectionMgr(editor);
-		// TODO
-		// $(document).on('selectionchange', '.editor-content', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
 		function adjustCursorPosition(force) {
 			selectionMgr.saveSelectionState(true, true, force);
@@ -90,15 +73,10 @@
 			return range;
 		}
 
-		var ignorePatches = false;
+		var ignorePatches = false,
+			noContentFix = false;
 
-		function setContent(value, noUndo) {
-			var result = setContentInternal(value);
-			ignorePatches = result.range ? noUndo : false;
-			return result;
-		}
-
-		function setContentInternal(value, noWatch, maxStartOffset) {
+		function setContent(value, noUndo, maxStartOffset) {
 			var textContent = getTextContent();
 			maxStartOffset = maxStartOffset !== undefined && maxStartOffset < textContent.length ? maxStartOffset : textContent.length - 1;
 			var startOffset = Math.min(
@@ -111,17 +89,10 @@
 				value.length - startOffset
 			);
 			var replacement = value.substring(startOffset, value.length - endOffset);
-			var range;
-			if (noWatch) {
-				watcher.noWatch(function() {
-					range = replaceContent(startOffset, textContent.length - endOffset, replacement);
-					if(range) {
-						lastTextContent = value;
-						parseSections(value);
-					}
-				});
-			} else {
-				range = replaceContent(startOffset, textContent.length - endOffset, replacement);
+			var range = replaceContent(startOffset, textContent.length - endOffset, replacement);
+			if (range) {
+				ignorePatches = noUndo;
+				noContentFix = true;
 			}
 			return {
 				start: startOffset,
@@ -143,7 +114,7 @@
 			var textContent = getTextContent();
 			var value = textContent.replace(search, replacement);
 			if (value != textContent) {
-				var offset = editor.setContentInternal(value);
+				var offset = editor.setContent(value);
 				selectionMgr.setSelectionStartEnd(offset.end, offset.end);
 				selectionMgr.updateCursorCoordinates(true);
 			}
@@ -173,20 +144,6 @@
 
 		var undoMgr = new cledit.UndoMgr(editor);
 
-		// TODO
-		/*
-		 function onComment() {
-		 if(watcher.isWatching === true) {
-		 undoMgr.currentMode = undoMgr.currentMode || 'comment';
-		 undoMgr.saveState();
-		 }
-		 }
-
-		 eventMgr.addListener('onDiscussionCreated', onComment);
-		 eventMgr.addListener('onDiscussionRemoved', onComment);
-		 eventMgr.addListener('onCommentsChanged', onComment);
-		 */
-
 		function addMarker(marker) {
 			editor.$markers[marker.id] = marker;
 		}
@@ -211,41 +168,41 @@
 		}, 10);
 
 		function checkContentChange(mutations) {
-			var removedSections = {};
-			var modifiedSections = {};
+			noContentFix || watcher.noWatch(function() {
+				var removedSections = {};
+				var modifiedSections = {};
 
-			function markModifiedSection(node) {
-				while (node && node !== contentElt) {
-					if (node.section) {
-						(node.parentNode ? modifiedSections : removedSections)[node.section.id] = node.section;
-						return;
+				function markModifiedSection(node) {
+					while (node && node !== contentElt) {
+						if (node.section) {
+							(node.parentNode ? modifiedSections : removedSections)[node.section.id] = node.section;
+							return;
+						}
+						node = node.parentNode;
 					}
-					node = node.parentNode;
 				}
-			}
 
-			mutations.forEach(function(mutation) {
-				markModifiedSection(mutation.target);
-				Array.prototype.forEach.call(mutation.addedNodes, markModifiedSection);
-				Array.prototype.forEach.call(mutation.removedNodes, markModifiedSection);
+				mutations.forEach(function(mutation) {
+					markModifiedSection(mutation.target);
+					Array.prototype.forEach.call(mutation.addedNodes, markModifiedSection);
+					Array.prototype.forEach.call(mutation.removedNodes, markModifiedSection);
+				});
+				removedSections = Object.keys(removedSections).map(function(key) {
+					return removedSections[key];
+				});
+				modifiedSections = Object.keys(modifiedSections).map(function(key) {
+					return modifiedSections[key];
+				});
+				highlighter.fixContent(modifiedSections, removedSections);
 			});
-			removedSections = Object.keys(removedSections).map(function(key) {
-				return removedSections[key];
-			});
-			modifiedSections = Object.keys(modifiedSections).map(function(key) {
-				return modifiedSections[key];
-			});
-			var isSelectionSaved;
-			watcher.noWatch(function() {
-				isSelectionSaved = highlighter.fixContent(modifiedSections, removedSections, mutations);
-			});
+			noContentFix = false;
 			var newTextContent = getTextContent();
 			if (newTextContent && newTextContent == lastTextContent) {
 				return;
 			}
 			var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent);
-			var patches = diffMatchPatch.patch_make(lastTextContent, diffs);
-			if(!ignorePatches) {
+			if (!ignorePatches) {
+				var patches = diffMatchPatch.patch_make(lastTextContent, diffs);
 				undoMgr.addPatches(patches);
 				undoMgr.setDefaultMode('typing');
 			}
@@ -254,20 +211,9 @@
 				editor.$markers[id].adjustOffset(diffs);
 			});
 
-			// TODO
-			/*
-			 var discussionList = _.values(fileDesc.discussionList);
-			 fileDesc.newDiscussion && discussionList.push(fileDesc.newDiscussion);
-			 var updateDiscussionList = adjustCommentOffsets(textContent, newTextContent, discussionList);
-			 if(updateDiscussionList === true) {
-			 fileDesc.discussionList = fileDesc.discussionList; // Write discussionList in localStorage
-			 }
-			 */
 			lastTextContent = newTextContent;
-			isSelectionSaved || selectionMgr.saveSelectionState();
+			selectionMgr.saveSelectionState();
 			parseSections(lastTextContent);
-			// TODO
-			//updateDiscussionList && eventMgr.onCommentsChanged(fileDesc);
 			ignorePatches || undoMgr.saveState();
 			ignorePatches = false;
 			triggerSpellCheck();
@@ -381,7 +327,6 @@
 		editor.watcher = watcher;
 		editor.adjustCursorPosition = adjustCursorPosition;
 		editor.setContent = setContent;
-		editor.setContentInternal = setContentInternal;
 		editor.replace = replace;
 		editor.replaceAll = replaceAll;
 		editor.replacePreviousText = replacePreviousText;

@@ -30,17 +30,19 @@
 
         var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
 
-        this.fixContent = function(modifiedSections, removedSections, mutations) {
+        this.fixContent = function(modifiedSections) {
             modifiedSections.forEach(function(section) {
-            	section.forceHighlighting = true;
+                section.forceHighlighting = true;
                 section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
                     lfElt.parentNode.removeChild(lfElt);
                 });
                 section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
                     brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
                 });
+                if (section.elt.textContent.slice(-1) !== '\n') {
+                    section.elt.appendChild(editor.$document.createTextNode('\n'));
+                }
             });
-            this.$trigger('domChanged', modifiedSections, removedSections, mutations);
         };
 
         this.addTrailingNode = function() {
@@ -103,7 +105,7 @@
                 sectionList.some(function(section, index) {
                     var newSection = newSectionList[index];
                     if (index >= newSectionList.length ||
-                    	section.forceHighlighting ||
+                        section.forceHighlighting ||
                         // Check text modification
                         section.text != newSection.text ||
                         // Check that section has not been detached or moved
@@ -120,7 +122,7 @@
                 sectionList.slice().reverse().some(function(section, index) {
                     var newSection = newSectionList[newSectionList.length - index - 1];
                     if (index >= newSectionList.length ||
-                    	section.forceHighlighting ||
+                        section.forceHighlighting ||
                         // Check modified
                         section.text != newSection.text ||
                         // Check that section has not been detached or moved
@@ -193,15 +195,6 @@
 
         function highlight(section) {
             var html = editor.options.highlighter(section.text).replace(/\n/g, lfHtml);
-            /*
-			 var frontMatter = section.textWithFrontMatter.substring(0, section.textWithFrontMatter.length - section.text.length);
-			 if(frontMatter.length) {
-			 // Front matter highlighting
-			 frontMatter = escape(frontMatter);
-			 frontMatter = frontMatter.replace(/\n/g, '<span class="token lf">\n</span>');
-			 text = '<span class="token md">' + frontMatter + '</span>' + text;
-			 }
-			 */
             var sectionElt = editor.$document.createElement('div');
             sectionElt.id = 'cledit-section-' + section.id;
             sectionElt.className = 'cledit-section';
