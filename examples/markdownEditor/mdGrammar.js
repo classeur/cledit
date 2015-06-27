@@ -239,8 +239,8 @@
 					"ref": {
 						pattern: /^\[[^\[\]]+\] ?/,
 						inside: {
-							"md md-bracket-start": /\[/,
-							"md md-ref": /^[^\[\]]+/,
+							"md md-bracket-start": /\[\^/,
+							"md-ref": /^[^\[\]]+/,
 							"md md-bracket-end": /\]/
 						}
 					}
