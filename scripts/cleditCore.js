@@ -8,7 +8,7 @@
 			$contentElt: contentElt,
 			$scrollElt: scrollElt,
 			$window: windowParam || window,
-			$keystrokes: {},
+			$keystrokes: [],
 			$markers: {}
 		};
 		editor.$document = editor.$window.document;
@@ -253,8 +253,10 @@
 		contentElt.addEventListener('keydown', keydownHandler(function(evt) {
 			selectionMgr.saveSelectionState();
 			adjustCursorPosition();
-			Object.keys(editor.$keystrokes).some(function(key) {
-				return editor.$keystrokes[key].perform(evt, editor);
+			editor.$keystrokes.some(function(keystrokeList) {
+				return keystrokeList.some(function(keystroke) {
+					return keystroke.perform(evt, editor);
+				});
 			});
 		}), false);
 
@@ -314,11 +316,13 @@
 			scrollTop = scrollElt.scrollTop;
 		}, false);
 
-		function addKeystroke(key, keystroke) {
-			editor.$keystrokes[key] = keystroke;
+		function addKeystroke(priority, keystroke) {
+			var keystrokeList = editor.$keystrokes[priority] || [];
+			keystrokeList.push(keystroke);
+			editor.$keystrokes[priority] = keystrokeList;
 		}
-		Object.keys(cledit.defaultKeystrokes).forEach(function(key) {
-			addKeystroke(key, cledit.defaultKeystrokes[key]);
+		cledit.defaultKeystrokes.forEach(function(keystroke) {
+			addKeystroke(100, keystroke);
 		});
 
 		editor.selectionMgr = selectionMgr;

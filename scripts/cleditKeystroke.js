@@ -25,9 +25,9 @@
     cledit.Keystroke = Keystroke;
 
     var clearNewline;
-    cledit.defaultKeystrokes = {
+    cledit.defaultKeystrokes = [
 
-        undo: new Keystroke(function(evt, state, editor) {
+        new Keystroke(function(evt, state, editor) {
             if ((!evt.ctrlKey && !evt.metaKey) || evt.altKey) {
                 return;
             }
@@ -51,7 +51,7 @@
             }
         }),
 
-        indent: new Keystroke(function(evt, state) {
+        new Keystroke(function(evt, state) {
             if (evt.which !== 9 || evt.metaKey || evt.ctrlKey) {
                 // Not tab
                 return;
@@ -91,7 +91,7 @@
             return true;
         }),
 
-        newline: new Keystroke(function(evt, state, editor) {
+        new Keystroke(function(evt, state, editor) {
             if (evt.which !== 13) {
                 // Not enter
                 clearNewline = false;
@@ -123,7 +123,7 @@
             return true;
         }),
 
-        delete: new Keystroke(function(evt, state, editor) {
+        new Keystroke(function(evt, state, editor) {
             if (evt.which !== 8 && evt.which !== 46) {
                 // Not backspace nor delete
                 clearNewline = false;
@@ -144,6 +144,6 @@
             state.selectionEnd = state.selectionStart;
             return true;
         })
-    };
+    ];
 
 })(window.cledit);
