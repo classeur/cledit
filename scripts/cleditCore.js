@@ -13,7 +13,6 @@
 		};
 		editor.$document = editor.$window.document;
 		cledit.Utils.createEventHooks(editor);
-		var scrollTop;
 		var debounce = cledit.Utils.debounce;
 
 		editor.toggleEditable = function(isEditable) {
@@ -139,7 +138,6 @@
 
 		function focus() {
 			selectionMgr.restoreSelection();
-			scrollElt.scrollTop = scrollTop;
 		}
 
 		var undoMgr = new cledit.UndoMgr(editor);
@@ -250,6 +248,33 @@
 			};
 		}
 
+		function removeEventListeners() {
+			editor.$window.removeEventListener('keydown', windowKeydownListener);
+			editor.$window.removeEventListener('mouseup', windowMouseupListener);
+		}
+
+		// In case of Ctrl/Cmd+A outside the editor element
+		function windowKeydownListener(evt) {
+			if (!editor.$window.document.contains(contentElt)) {
+				return removeEventListeners();
+			}
+			keydownHandler(function() {
+				adjustCursorPosition();
+			})(evt);
+		}
+		editor.$window.addEventListener('keydown', windowKeydownListener, false);
+
+		// Mouseup can happen outside the editor element
+		function windowMouseupListener() {
+			if (!editor.$window.document.contains(contentElt)) {
+				return removeEventListeners();
+			}
+			selectionMgr.saveSelectionState(true, false);
+		}
+		editor.$window.addEventListener('mouseup', windowMouseupListener);
+		// This can also provoke selection changes and does not fire mouseup event on Chrome/OSX
+		contentElt.addEventListener('contextmenu', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
+
 		contentElt.addEventListener('keydown', keydownHandler(function(evt) {
 			selectionMgr.saveSelectionState();
 			adjustCursorPosition();
@@ -259,16 +284,6 @@
 				});
 			});
 		}), false);
-
-		// In case of Ctrl/Cmd+A outside the editor element
-		editor.$window.addEventListener('keydown', keydownHandler(function() {
-			adjustCursorPosition();
-		}), false);
-
-		// Mouseup can happen outside the editor element
-		editor.$window.addEventListener('mouseup', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
-		// This can also provoke selection changes and does not fire mouseup event on Chrome/OSX
-		contentElt.addEventListener('contextmenu', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
 
 		contentElt.addEventListener('compositionstart', function() {
 			highlighter.isComposing++;
@@ -312,10 +327,6 @@
 			editor.$trigger('blur');
 		}, false);
 
-		scrollElt.addEventListener('scroll', function() {
-			scrollTop = scrollElt.scrollTop;
-		}, false);
-
 		function addKeystroke(priority, keystroke) {
 			var keystrokeList = editor.$keystrokes[priority] || [];
 			keystrokeList.push(keystroke);
@@ -353,7 +364,10 @@
 			editor.options = options;
 
 			if (options.content !== undefined) {
-				lastTextContent = options.content;
+				lastTextContent = options.content.toString();
+				if (lastTextContent.slice(-1) !== '\n') {
+					lastTextContent += '\n';
+				}
 			}
 
 			if (options.sectionDelimiter && !(options.sectionDelimiter instanceof RegExp)) {
@@ -371,8 +385,6 @@
 			if (options.scrollTop !== undefined) {
 				scrollElt.scrollTop = options.scrollTop;
 			}
-
-			scrollTop = scrollElt.scrollTop;
 		};
 
 		return editor;

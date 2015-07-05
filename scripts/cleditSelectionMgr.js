@@ -267,19 +267,22 @@
 						var container = node;
 						while (node != contentElt) {
 							while (node = node.previousSibling) {
-								if (node.textContent) {
-									offset += node.textContent.length;
-								}
+								offset += (node.textContent || '').length;
 							}
 							node = container = container.parentNode;
 						}
-
+						var selectionText = selectionRange + '';
+						// Fix end of line when only br is selected
+						var brElt = selectionRange.endContainer.firstChild;
+						if(brElt && brElt.tagName === 'BR' && selectionRange.endOffset === 1) {
+							selectionText += '\n';
+						}
 						if (comparePoints(selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset) == 1) {
-							selectionStart = offset + (selectionRange + '').length;
+							selectionStart = offset + selectionText.length;
 							selectionEnd = offset;
 						} else {
 							selectionStart = offset;
-							selectionEnd = offset + (selectionRange + '').length;
+							selectionEnd = offset + selectionText.length;
 						}
 
 						if (selectionStart === selectionEnd && selectionStart === editor.getContent().length) {
@@ -383,9 +386,9 @@
 				var range = this.createRange(startOffset, endOffset);
 				var rect = range.getBoundingClientRect();
 				return {
-					top: rect.top - contentElt.getBoundingClientRect().top + contentElt.scrollTop,
-					height: rect.height,
-					left: rect[left] - contentElt.getBoundingClientRect().left + contentElt.scrollLeft
+					top: Math.round(rect.top - contentElt.getBoundingClientRect().top + contentElt.scrollTop),
+					height: Math.round(rect.height),
+					left: Math.round(rect[left] - contentElt.getBoundingClientRect().left + contentElt.scrollLeft)
 				};
 			}
 		};

@@ -126,7 +126,6 @@
         new Keystroke(function(evt, state, editor) {
             if (evt.which !== 8 && evt.which !== 46) {
                 // Not backspace nor delete
-                clearNewline = false;
                 return;
             }
 
