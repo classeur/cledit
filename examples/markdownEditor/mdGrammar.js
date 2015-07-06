@@ -166,7 +166,7 @@
 		}
 		if (options.footnotes) {
 			md.fndef = {
-				pattern: /^ {0,3}\[\^.*?\]:[ \t]+.*$/gm,
+				pattern: /^ {0,3}\[\^.*?\]:.*$/gm,
 				inside: {
 					"ref-id": {
 						pattern: /\[\^.*?\]/,
@@ -179,7 +179,7 @@
 			};
 		}
 		md.linkdef = {
-			pattern: /^ {0,3}\[.*?\]:[ \t]+.*$/gm,
+			pattern: /^ {0,3}\[.*?\]:.*$/gm,
 			inside: {
 				"link-id": {
 					pattern: /\[.*?\]/,
