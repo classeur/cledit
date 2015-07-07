@@ -370,10 +370,6 @@
 				}
 			}
 
-			if (options.sectionDelimiter && !(options.sectionDelimiter instanceof RegExp)) {
-				options.sectionDelimiter = new RegExp(options.sectionDelimiter, 'gm');
-			}
-
 			parseSections(lastTextContent, true);
 			if (options.selectionStart !== undefined && options.selectionEnd !== undefined) {
 				editor.setSelection(options.selectionStart, options.selectionEnd);

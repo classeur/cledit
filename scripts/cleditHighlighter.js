@@ -71,24 +71,10 @@
                 return sectionList;
             }
 
-            var tmpText = content + "\n\n";
-            var newSectionList = [];
-            var offset = 0;
-
-            function addSection(startOffset, endOffset) {
-                var sectionText = tmpText.substring(offset, endOffset);
-                newSectionList.push(new Section(sectionText));
-            }
-
-            // Look for delimiters
-            editor.options.sectionDelimiter && tmpText.replace(editor.options.sectionDelimiter, function(match, matchOffset) {
-                // Create a new section with the text preceding the delimiter
-                addSection(offset, matchOffset);
-                offset = matchOffset;
+            var newSectionList = editor.options.sectionParser ? editor.options.sectionParser(content) : [content];
+            newSectionList = newSectionList.map(function(sectionText) {
+                return new Section(sectionText);
             });
-
-            // Last section
-            addSection(offset, content.length);
 
             var modifiedSections = [];
             var sectionsToRemove = [];
