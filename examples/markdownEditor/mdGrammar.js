@@ -340,13 +340,13 @@
 			link: md.link,
 			imgref: md.imgref,
 			linkref: md.linkref,
+			comment: markup.comment,
+			tag: markup.tag,
 			url: urlPattern,
 			email: emailPattern,
 			strong: md.strong,
 			em: md.em,
 			strike: md.strike,
-			comment: markup.comment,
-			tag: markup.tag,
 			entity: markup.entity
 		};
 
@@ -380,11 +380,11 @@
 
 		var inside = {
 			code: md.code,
+			comment: markup.comment,
+			tag: markup.tag,
 			strong: md.strong,
 			em: md.em,
 			strike: md.strike,
-			comment: markup.comment,
-			tag: markup.tag,
 			entity: markup.entity
 		};
 		md.link.inside["md md-underlined-text"].inside = inside;
