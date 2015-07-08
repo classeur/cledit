@@ -60,20 +60,20 @@
 			};
 		}
 		md['h1 alt'] = {
-			pattern: /^(.+)[ \t]*\n=+[ \t]*$/gm,
+			pattern: /^.+\n=+[ \t]*$/gm,
 			inside: {
 				"md md-hash": /=+[ \t]*$/
 			}
 		};
 		md['h2 alt'] = {
-			pattern: /^(.+)[ \t]*\n-+[ \t]*$/gm,
+			pattern: /^.+\n-+[ \t]*$/gm,
 			inside: {
 				"md md-hash": /-+[ \t]*$/
 			}
 		};
 		for (var i = 6; i >= 1; i--) {
 			md["h" + i] = {
-				pattern: new RegExp("^#{" + i + "}.+$", "gm"),
+				pattern: new RegExp("^#{" + i + "}[ \t].+$", "gm"),
 				inside: {
 					"md md-hash": new RegExp("^#{" + i + "}")
 				}
@@ -340,13 +340,13 @@
 			link: md.link,
 			imgref: md.imgref,
 			linkref: md.linkref,
-			comment: markup.comment,
-			tag: markup.tag,
 			url: urlPattern,
 			email: emailPattern,
 			strong: md.strong,
 			em: md.em,
 			strike: md.strike,
+			comment: markup.comment,
+			tag: markup.tag,
 			entity: markup.entity
 		};
 
@@ -380,11 +380,11 @@
 
 		var inside = {
 			code: md.code,
-			comment: markup.comment,
-			tag: markup.tag,
 			strong: md.strong,
 			em: md.em,
 			strike: md.strike,
+			comment: markup.comment,
+			tag: markup.tag,
 			entity: markup.entity
 		};
 		md.link.inside["md md-underlined-text"].inside = inside;

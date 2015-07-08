@@ -1,7 +1,6 @@
 (function(cledit) {
 
     var styleElts = [];
-    var sectionCounter = 0;
 
     function createStyleSheet(document) {
         var styleElt = document.createElement('style');
@@ -20,6 +19,7 @@
         }) || createStyleSheet(editor.$document);
 
         var contentElt = editor.$contentElt;
+        var sectionCounter = 0;
         this.isComposing = 0;
 
         var sectionList = [];
