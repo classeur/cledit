@@ -141,9 +141,9 @@
 			pattern: /^([*\-_] *){3,}$/gm
 		};
 		md.blockquote = {
-			pattern: /^ {0,3}> *[^\n]+$/gm,
+			pattern: /^( {0,3}>.+\n)+/g,
 			inside: {
-				"md md-gt": /^ {0,3}> */,
+				"md md-gt": /^ {0,3}>/gm,
 				"li": md.li
 			}
 		};
@@ -193,11 +193,11 @@
 			}
 		};
 		md.p = {
-			pattern: /.+/g,
+			pattern: /([ \t]*\S.+\n)*/g,
 			inside: {}
 		};
 		if (options.toc) {
-			md.p.inside['md md-toc'] = /^\s*\[(toc|TOC)\]\s*$/g;
+			md.p.inside['md md-toc'] = /^\s*\[toc\]$/mi;
 		}
 		md.img = {
 			pattern: /!\[[^\]]*\]\([^\)]+\)/g,
@@ -233,17 +233,18 @@
 			}
 		};
 		if (options.footnotes) {
+			md.inlinefn = {
+				pattern: /\^\[(.*?)\]/g,
+				inside: {
+					"md md-bracket-start": /^\^\[/,
+					"md md-bracket-end": /\]$/
+				}
+			};
 			md.fn = {
 				pattern: /\[\^(.*?)\]/g,
 				inside: {
-					"ref": {
-						pattern: /^\[[^\[\]]+\] ?/,
-						inside: {
-							"md md-bracket-start": /\[\^/,
-							"md-ref": /^[^\[\]]+/,
-							"md md-bracket-end": /\]/
-						}
-					}
+					"md md-bracket-start": /^\[\^/,
+					"md md-bracket-end": /\]$/
 				}
 			};
 		}
@@ -291,8 +292,7 @@
 			}
 		};
 		md.code = {
-			pattern: /(^|[^\\])(`+)([^\r]*?[^`])\2(?!`)/g,
-			lookbehind: true,
+			pattern: /(`+)[\s\S]*?\1/g,
 			inside: {
 				"md md-code": /`/
 			}
@@ -309,44 +309,67 @@
 			};
 		}
 		md.strong = {
-			pattern: /([_\*])\1((?!\1{2}).)*\1{2}/g,
+			pattern: /(^|[^\w*])([_\*])\2(?![_\*])[\s\S]*?\2{2}(?=[^\w*])/gm,
+			lookbehind: true,
 			inside: {
-				"md md-strong": /([_\*])\1/g
+				"md md-strong md-start": /^([_\*])\1/,
+				"md md-strong md-close": /([_\*])\1$/
 			}
 		};
 		md.em = {
-			pattern: /(^|[^\\])(\*|_)(\S[^\2]*?)??[^\s\\]+?\2/g,
+			pattern: /(^|[^\w*])([_\*])(?![_\*])[\s\S]*?\2(?=[^\w*])/gm,
 			lookbehind: true,
 			inside: {
-				"md md-em md-start": /^(\*|_)/,
-				"md md-em md-close": /(\*|_)$/
+				"md md-em md-start": /^[_\*]/,
+				"md md-em md-close": /[_\*]$/
 			}
 		};
 		if (options.strikes) {
 			md.strike = {
-				pattern: /(^|\n|\W)(~~)(?=\S)([^\r]*?\S)\2/gm,
+				pattern: /(^|[^\w*])(~~)[\s\S]*?\2(?=[^\w*])/gm,
 				lookbehind: true,
 				inside: {
-					"md md-s": /(~~)/,
+					"md md-s": /~~/,
 					"md-strike-text": /[^~]+/
+				}
+			};
+		}
+		if (options.subs) {
+			md.subs = {
+				pattern: /(~)(?=\S)(.*?\S)\1/gm,
+				inside: {
+					"md md-s": /~/,
+					"md-sub": /[^~]+/
+				}
+			};
+		}
+		if (options.sups) {
+			md.sups = {
+				pattern: /(\^)(?=\S)(.*?\S)\1/gm,
+				inside: {
+					"md md-s": /\^/,
+					"md-sup": /[^\^]+/
 				}
 			};
 		}
 		var rest = {
 			code: md.code,
 			math: md.math,
+			inlinefn: md.inlinefn,
 			fn: md.fn,
 			img: md.img,
 			link: md.link,
 			imgref: md.imgref,
 			linkref: md.linkref,
+			comment: markup.comment,
+			tag: markup.tag,
 			url: urlPattern,
 			email: emailPattern,
 			strong: md.strong,
 			em: md.em,
 			strike: md.strike,
-			comment: markup.comment,
-			tag: markup.tag,
+			subs: md.subs,
+			sups: md.sups,
 			entity: markup.entity
 		};
 
@@ -368,6 +391,7 @@
 
 		rest = {
 			code: md.code,
+			inlinefn: md.inlinefn,
 			fn: md.fn,
 			link: md.link,
 			linkref: md.linkref
@@ -380,11 +404,13 @@
 
 		var inside = {
 			code: md.code,
+			comment: markup.comment,
+			tag: markup.tag,
 			strong: md.strong,
 			em: md.em,
 			strike: md.strike,
-			comment: markup.comment,
-			tag: markup.tag,
+			subs: md.subs,
+			sups: md.sups,
 			entity: markup.entity
 		};
 		md.link.inside["md md-underlined-text"].inside = inside;
