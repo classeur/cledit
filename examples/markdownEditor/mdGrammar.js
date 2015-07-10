@@ -30,7 +30,6 @@
 						'namespace': /^[\w-]+?:/
 					}
 				}
-
 			}
 		},
 		'entity': /&#?[\da-z]{1,8};/gi
@@ -50,372 +49,325 @@
 
 	window.mdGrammar = function(options) {
 		options = options || {};
-		var md = {};
+		var grammar = {};
 		var insideFcb = options.insideFcb || {};
-		insideFcb["md md-pre"] = /`{3}/;
-		if (options.fcbs) {
-			md['pre gfm'] = {
+		insideFcb["cl cl-pre"] = /`{3}/;
+		if (options.fences) {
+			grammar['pre gfm'] = {
 				pattern: /^`{3}.*\n(?:[\s\S]*?)\n`{3} *$/gm,
 				inside: insideFcb
 			};
 		}
-		md['h1 alt'] = {
-			pattern: /^.+\n=+[ \t]*$/gm,
+		grammar.li = {
+			pattern: /^ {0,3}(?:[*+\-]|\d+\.)[ \t].+(?:\n[ \t]*\S.*|\n[ \t]*\n( {2}|\t).*)*/gm,
 			inside: {
-				"md md-hash": /=+[ \t]*$/
+				"cl cl-li": /^[ \t]*([*+\-]|\d+\.)[ \t]/gm
 			}
 		};
-		md['h2 alt'] = {
-			pattern: /^.+\n-+[ \t]*$/gm,
-			inside: {
-				"md md-hash": /-+[ \t]*$/
-			}
-		};
-		for (var i = 6; i >= 1; i--) {
-			md["h" + i] = {
-				pattern: new RegExp("^#{" + i + "}[ \t].+$", "gm"),
-				inside: {
-					"md md-hash": new RegExp("^#{" + i + "}")
-				}
-			};
-		}
-		md.li = {
-			pattern: /^[ \t]*([*+\-]|\d+\.)[ \t].+(?:\n|[ \t].*\n)*/gm,
-			inside: {
-				"md md-li": /^[ \t]*([*+\-]|\d+\.)[ \t]/m
-			}
-		};
-		if (options.fcbs) {
-			md.li.inside['pre gfm'] = {
-				pattern: /^((?: {4}|\t)+)`{3}.*\n(?:[\s\S]*?)\n\1`{3} *$/gm,
+		if (options.fences) {
+			grammar.li.inside['pre gfm'] = {
+				pattern: /^((?: {4}|\t)+)`{3}.*\n(?:[\s\S]*?)\n\1`{3}\s*$/gm,
 				inside: insideFcb
 			};
 		}
-		md.pre = {
-			pattern: /(^|(?:^|(?:^|\n)(?![ \t]*([*+\-]|\d+\.)[ \t]).*\n)\s*?\n)(\s*(?: {4}|\t).*(?:\n|$))+/g,
-			lookbehind: true
-		};
-		if (options.tables) {
-			md.table = {
-				pattern: new RegExp(
-					[
-						'^',
-						'[ ]{0,3}', // Allowed whitespace
-						'[|]', // Initial pipe
-						'(.+)\\n', // $1: Header Row
-
-						'[ ]{0,3}', // Allowed whitespace
-						'[|]([ ]*[-:]+[-| :]*)\\n', // $2: Separator
-
-						'(', // $3: Table Body
-						'(?:[ ]*[|].*\\n?)*', // Table rows
-						')',
-						'(?:\\n|$)' // Stop at final newline
-					].join(''),
-					'gm'
-				),
-				inside: {}
-			};
-			md['table alt'] = {
-				pattern: new RegExp(
-					[
-						'^',
-						'[ ]{0,3}', // Allowed whitespace
-						'(\\S.*[|].*)\\n', // $1: Header Row
-
-						'[ ]{0,3}', // Allowed whitespace
-						'([-:]+[ ]*[|][-| :]*)\\n', // $2: Separator
-
-						'(', // $3: Table Body
-						'(?:.*[|].*\\n?)*', // Table rows
-						')',
-						'(?:\\n|$)' // Stop at final newline
-					].join(''),
-					'gm'
-				),
-				inside: {}
-			};
-		}
-
-		md.hr = {
-			pattern: /^([*\-_] *){3,}$/gm
-		};
-		md.blockquote = {
-			pattern: /^( {0,3}>.+\n)+/g,
+		grammar.blockquote = {
+			pattern: /^ {0,3}>.+(?:\n[ \t]*\S.*)*/gm,
 			inside: {
-				"md md-gt": /^ {0,3}>/gm,
-				"li": md.li
+				"cl cl-gt": /^\s*>/gm,
+				"li": grammar.li
 			}
 		};
-		if (options.maths) {
-			md['math block'] = {
-				pattern: /(\$\$|\\\\\[|\\\\\\\\\()[\s\S]*?(\$\$|\\\\\]|\\\\\\\\\))/g,
+		grammar['h1 alt'] = {
+			pattern: /^.+\n=+[ \t]*$/gm,
+			inside: {
+				"cl cl-hash": /=+[ \t]*$/
+			}
+		};
+		grammar['h2 alt'] = {
+			pattern: /^.+\n-+[ \t]*$/gm,
+			inside: {
+				"cl cl-hash": /-+[ \t]*$/
+			}
+		};
+		for (var i = 6; i >= 1; i--) {
+			grammar["h" + i] = {
+				pattern: new RegExp("^#{" + i + "}[ \t].+$", "gm"),
 				inside: {
-					"md md-bracket-start": /^(\$\$|\\\\\[|\\\\\\\\\()/,
-					"md md-bracket-end": /(\$\$|\\\\\]|\\\\\\\\\))/,
-					rest: latex
-				}
-			};
-			md['latex block'] = {
-				pattern: /\\?\\begin\{([a-z]*\*?)\}[\s\S]*?\\?\\end\{\1\}/g,
-				inside: {
-					"keyword": /\\?\\(begin|end)/,
-					rest: latex
+					"cl cl-hash": new RegExp("^#{" + i + "}")
 				}
 			};
 		}
+		if (options.tables) {
+			grammar.table = {
+				pattern: new RegExp(
+					[
+						'^',
+						'[ \t]*',
+						'[|]', // Initial pipe
+						'.+\\n', // Header Row
+						'[ \t]*',
+						'[|][ ]*[-:]+[-| :]*\\n', // Separator
+						'(?:[ \t]*[|].*\\n?)*', // Table rows
+						'$'
+					].join(''),
+					'gm'
+				),
+				inside: {}
+			};
+			grammar['table alt'] = {
+				pattern: new RegExp(
+					[
+						'^',
+						'[ \t]*',
+						'\\S.*[|].*\\n', // Header Row
+						'[ \t]*',
+						'[-:]+[ ]*[|][-| :]*\\n', // Separator
+						'(?:.*[|].*\\n?)*', // Table rows
+						'$' // Stop at final newline
+					].join(''),
+					'gm'
+				),
+				inside: {}
+			};
+		}
+		grammar.hr = {
+			pattern: /^ {0,3}([*\-_] *){3,}$/gm
+		};
 		if (options.footnotes) {
-			md.fndef = {
+			grammar.fndef = {
 				pattern: /^ {0,3}\[\^.*?\]:.*$/gm,
 				inside: {
 					"ref-id": {
-						pattern: /\[\^.*?\]/,
+						pattern: /^ {0,3}\[\^.*?\]/,
 						inside: {
-							"md md-bracket-start": /\[/,
-							"md md-bracket-end": /\]/
+							cl: /(\[\^|\])/,
 						}
 					}
 				}
 			};
 		}
-		md.linkdef = {
+		if (options.abbrs) {
+			grammar.abbrdef = {
+				pattern: /^ {0,3}\*\[.*?\]:.*$/gm,
+				inside: {
+					"abbr-id": {
+						pattern: /^ {0,3}\*\[.*?\]/,
+						inside: {
+							cl: /(\*\[|\])/,
+						}
+					}
+				}
+			};
+		}
+		grammar.linkdef = {
 			pattern: /^ {0,3}\[.*?\]:.*$/gm,
 			inside: {
 				"link-id": {
-					pattern: /\[.*?\]/,
+					pattern: /^ {0,3}\[.*?\]/,
 					inside: {
-						"md md-bracket-start": /\[/,
-						"md md-bracket-end": /\]/
+						cl: /[\[\]]/,
 					}
 				},
-				url: urlPattern,
-				linktitle: /['\"\(][^\'\"\)]*['\"\)]/
+				url: urlPattern
 			}
 		};
-		md.p = {
-			pattern: /([ \t]*\S.+\n)*/g,
+		grammar.p = {
+			pattern: /^ {0,3}\S.*$(\n.*\S.*)*/gm,
 			inside: {}
 		};
-		if (options.toc) {
-			md.p.inside['md md-toc'] = /^\s*\[toc\]$/mi;
+		if (options.tocs) {
+			grammar.p.inside['cl cl-toc'] = /^[ \t]*\[toc\]$/mi;
 		}
-		md.img = {
-			pattern: /!\[[^\]]*\]\([^\)]+\)/g,
-			inside: {
-				"md md-bang": /^!/,
-				"md md-bracket-start": /\[/,
-				"md md-alt": /[^\[]+(?=\])/,
-				"md md-bracket-end": /\](?=\()/,
-				"md img-parens": {
-					pattern: /\([^\)]+\)/,
-					inside: {
-						"md md-paren-start": /^\(/,
-						"md md-title": /(['‘][^'’]*['’]|["“][^"”]*["”])(?=\)$)/,
-						"md md-src": /[^\('" \t]+(?=[\)'" \t])/,
-						"md md-paren-end": /\)$/
-					}
-				}
-			}
+		grammar.pre = {
+			pattern: /((?: {4}|\t).*(?:\n|$))+/g
 		};
-		md.link = {
-			pattern: /\[(?:(\\.)|[^\[\]])*\]\([^\(\)\s]+(\(\S*?\))??[^\(\)\s]*?(\s(['‘][^'’]*['’]|["“][^"”]*["”]))?\)/gm,
-			inside: {
-				"md md-bracket-start": {
-					pattern: /(^|[^\\])\[/,
-					lookbehind: true
-				},
-				"md md-underlined-text": {
-					pattern: /(?:(\\.)|[^\[\]])+(?=\])/
-				},
-				"md md-bracket-end": /\]\s?\(/,
-				"md md-paren-end": /\)$/,
-				"md md-href": /.*/
-			}
-		};
-		if (options.footnotes) {
-			md.inlinefn = {
-				pattern: /\^\[(.*?)\]/g,
-				inside: {
-					"md md-bracket-start": /^\^\[/,
-					"md md-bracket-end": /\]$/
-				}
-			};
-			md.fn = {
-				pattern: /\[\^(.*?)\]/g,
-				inside: {
-					"md md-bracket-start": /^\[\^/,
-					"md md-bracket-end": /\]$/
-				}
-			};
-		}
-		md.imgref = {
-			pattern: /!\[(.*?)\] ?\[(.*?)\]/g,
-			inside: {
-				"md md-bang": /^!/,
-				"ref-end": {
-					pattern: /\[[^\[\]]+\]$/,
-					inside: {
-						"md md-bracket-start": /\[/,
-						"md md-href": /[^\[\]]+(?=]$)/,
-						"md md-bracket-end": /\]/
-					}
-				},
-				"ref-start": {
-					pattern: /^\[[^\[\]]+\] ?/,
-					inside: {
-						"md md-bracket-start": /\[/,
-						"md md-alt": /^[^\[\]]+/,
-						"md md-bracket-end": /\]/
-					}
-				}
-			}
-		};
-		md.linkref = {
-			pattern: /\[(.*?)\] ?\[(.*?)\]/g,
-			inside: {
-				"ref-end": {
-					pattern: /\[[^\[\]]+\]$/,
-					inside: {
-						"md md-bracket-start": /\[/,
-						"md md-href": /[^\[\]]+(?=]$)/,
-						"md md-bracket-end": /\]/
-					}
-				},
-				"ref-start": {
-					pattern: /^\[[^\[\]]+\] ?/,
-					inside: {
-						"md md-bracket-start": /\[/,
-						"md md-underlined-text": /^[^\[\]]+/,
-						"md md-bracket-end": /\]/
-					}
-				}
-			}
-		};
-		md.code = {
+
+		var rest = {};
+		rest.code = {
 			pattern: /(`+)[\s\S]*?\1/g,
 			inside: {
-				"md md-code": /`/
+				"cl cl-code": /`/
 			}
 		};
 		if (options.maths) {
-			md.math = {
-				pattern: /([^\d])\$.*?\$(?!\d)/g,
+			rest['math block'] = {
+				pattern: /\\\\\[[\s\S]*?\\\\\]/g,
+				inside: {
+					"cl cl-bracket-start": /^\\\\\[/,
+					"cl cl-bracket-end": /\\\\\]$/,
+					rest: latex
+				}
+			};
+			rest['math inline'] = {
+				pattern: /\\\\\([\s\S]*?\\\\\)/g,
+				inside: {
+					"cl cl-bracket-start": /^\\\\\(/,
+					"cl cl-bracket-end": /\\\\\)$/,
+					rest: latex
+				}
+			};
+			rest['math expr block'] = {
+				pattern: /(\$\$)[\s\S]*?\1/g,
+				inside: {
+					"cl cl-bracket-start": /^\$\$/,
+					"cl cl-bracket-end": /\$\$$/,
+					rest: latex
+				}
+			};
+			rest['math expr inline'] = {
+				pattern: /([^\d])\$[\s\S]*?\$(?!\d)/g,
 				lookbehind: true,
 				inside: {
-					"md md-bracket-start": /^\$/,
-					"md md-bracket-end": /\$$/,
+					"cl cl-bracket-start": /^\$/,
+					"cl cl-bracket-end": /\$$/,
+					rest: latex
+				}
+			};
+			rest['latex block'] = {
+				pattern: /\\begin\{([a-z]*\*?)\}[\s\S]*?\\?\\end\{\1\}/g,
+				inside: {
+					"keyword": /\\(begin|end)/,
 					rest: latex
 				}
 			};
 		}
-		md.strong = {
-			pattern: /(^|[^\w*])([_\*])\2(?![_\*])[\s\S]*?\2{2}(?=[^\w*])/gm,
-			lookbehind: true,
+		if (options.footnotes) {
+			rest.inlinefn = {
+				pattern: /\^\[.+?\]/g,
+				inside: {
+					"cl": /(\^\[|\])/,
+				}
+			};
+			rest.fn = {
+				pattern: /\[\^.+?\]/g,
+				inside: {
+					"cl": /(\[\^|\])/
+				}
+			};
+		}
+		rest.img = {
+			pattern: /!\[.*?\]\(.+?\)/g,
 			inside: {
-				"md md-strong md-start": /^([_\*])\1/,
-				"md md-strong md-close": /([_\*])\1$/
+				"cl cl-title": /['‘][^'’]*['’]|["“][^"”]*["”](?=\)$)/,
+				"cl cl-src": {
+					pattern: /(\]\()[^\('" \t]+(?=[\)'" \t])/,
+					lookbehind: true
+				}
 			}
 		};
-		md.em = {
-			pattern: /(^|[^\w*])([_\*])(?![_\*])[\s\S]*?\2(?=[^\w*])/gm,
-			lookbehind: true,
+		rest.link = {
+			pattern: /\[.*?\]\(.+?\)/gm,
 			inside: {
-				"md md-em md-start": /^[_\*]/,
-				"md md-em md-close": /[_\*]$/
+				"cl cl-underlined-text": {
+					pattern: /(\[)[^\]]*/,
+					lookbehind: true,
+				},
+				"cl cl-title": /['‘][^'’]*['’]|["“][^"”]*["”](?=\)$)/,
 			}
 		};
-		if (options.strikes) {
-			md.strike = {
-				pattern: /(^|[^\w*])(~~)[\s\S]*?\2(?=[^\w*])/gm,
+		rest.imgref = {
+			pattern: /!\[.*?\][ \t]*\[.*?\]/g,
+		};
+		rest.linkref = {
+			pattern: /\[.*?\][ \t]*\[.*?\]/g,
+			inside: {
+				"cl cl-underlined-text": {
+					pattern: /^(\[)[^\]]*(?=\][ \t]*\[)/,
+					lookbehind: true,
+				}
+			}
+		};
+		rest.comment = markup.comment;
+		rest.tag = markup.tag;
+		rest.url = urlPattern;
+		rest.email = emailPattern;
+		rest.strong = {
+			pattern: /(^|[^\w*])([_\*])\2(?![_\*])[\s\S]*?\2{2}(?=([^\w*]|$))/gm,
+			lookbehind: true,
+			inside: {
+				"cl cl-strong cl-start": /^([_\*])\1/,
+				"cl cl-strong cl-close": /([_\*])\1$/
+			}
+		};
+		rest.em = {
+			pattern: /(^|[^\w*])([_\*])(?![_\*])[\s\S]*?\2(?=([^\w*]|$))/gm,
+			lookbehind: true,
+			inside: {
+				"cl cl-em cl-start": /^[_\*]/,
+				"cl cl-em cl-close": /[_\*]$/
+			}
+		};
+		if (options.dels) {
+			rest.del = {
+				pattern: /(^|[^\w*])(~~)[\s\S]*?\2(?=([^\w*]|$))/gm,
 				lookbehind: true,
 				inside: {
-					"md md-s": /~~/,
-					"md-strike-text": /[^~]+/
+					"cl": /~~/,
+					"cl-del-text": /[^~]+/
 				}
 			};
 		}
 		if (options.subs) {
-			md.subs = {
+			rest.sub = {
 				pattern: /(~)(?=\S)(.*?\S)\1/gm,
 				inside: {
-					"md md-s": /~/,
-					"md-sub": /[^~]+/
+					"cl": /~/,
 				}
 			};
 		}
 		if (options.sups) {
-			md.sups = {
+			rest.sup = {
 				pattern: /(\^)(?=\S)(.*?\S)\1/gm,
 				inside: {
-					"md md-s": /\^/,
-					"md-sup": /[^\^]+/
+					"cl": /\^/,
 				}
 			};
 		}
-		var rest = {
-			code: md.code,
-			math: md.math,
-			inlinefn: md.inlinefn,
-			fn: md.fn,
-			img: md.img,
-			link: md.link,
-			imgref: md.imgref,
-			linkref: md.linkref,
-			comment: markup.comment,
-			tag: markup.tag,
-			url: urlPattern,
-			email: emailPattern,
-			strong: md.strong,
-			em: md.em,
-			strike: md.strike,
-			subs: md.subs,
-			sups: md.sups,
-			entity: markup.entity
-		};
+		rest.entity = markup.entity;
 
 		for (var c = 6; c >= 1; c--) {
-			md["h" + c].inside.rest = rest;
+			grammar["h" + c].inside.rest = rest;
 		}
-		md["h1 alt"].inside.rest = rest;
-		md["h2 alt"].inside.rest = rest;
+		grammar["h1 alt"].inside.rest = rest;
+		grammar["h2 alt"].inside.rest = rest;
 		if (options.tables) {
-			md.table.inside.rest = rest;
-			md["table alt"].inside.rest = rest;
+			grammar.table.inside.rest = rest;
+			grammar["table alt"].inside.rest = rest;
 		}
-		md.p.inside.rest = rest;
-		md.blockquote.inside.rest = rest;
-		md.li.inside.rest = rest;
+		grammar.p.inside.rest = rest;
+		grammar.blockquote.inside.rest = rest;
+		grammar.li.inside.rest = rest;
 		if (options.footnotes) {
-			md.fndef.inside.rest = rest;
+			grammar.fndef.inside.rest = rest;
 		}
 
-		rest = {
-			code: md.code,
-			inlinefn: md.inlinefn,
-			fn: md.fn,
-			link: md.link,
-			linkref: md.linkref
+		var restLight = {
+			code: rest.code,
+			inlinefn: rest.inlinefn,
+			fn: rest.fn,
+			link: rest.link,
+			linkref: rest.linkref
 		};
-		md.strong.inside.rest = rest;
-		md.em.inside.rest = rest;
-		if (options.strikes) {
-			md.strike.inside.rest = rest;
+		rest.strong.inside.rest = restLight;
+		rest.em.inside.rest = restLight;
+		if (options.dels) {
+			rest.del.inside.rest = restLight;
 		}
 
 		var inside = {
-			code: md.code,
-			comment: markup.comment,
-			tag: markup.tag,
-			strong: md.strong,
-			em: md.em,
-			strike: md.strike,
-			subs: md.subs,
-			sups: md.sups,
+			code: rest.code,
+			comment: rest.comment,
+			tag: rest.tag,
+			strong: rest.strong,
+			em: rest.em,
+			del: rest.del,
+			sub: rest.sub,
+			sup: rest.sup,
 			entity: markup.entity
 		};
-		md.link.inside["md md-underlined-text"].inside = inside;
-		md.linkref.inside["ref-start"].inside["md md-underlined-text"].inside = inside;
+		rest.link.inside["cl cl-underlined-text"].inside = inside;
+		rest.linkref.inside["cl cl-underlined-text"].inside = inside;
 
-		return md;
+		return grammar;
 	};
 })();

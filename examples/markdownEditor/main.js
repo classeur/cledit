@@ -4,9 +4,14 @@ var editor = window.cledit(
 	document.querySelector('.scroller')
 );
 var prismGrammar = window.mdGrammar({
-	fcbs: true,
+	fences: true,
 	tables: true,
-	strikes: true
+	footnotes: true,
+	abbrs: true,
+	tocs: true,
+	dels: true,
+	subs: true,
+	sups: true,
 });
 editor.init({
 	highlighter: function(text) {

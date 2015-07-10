@@ -69,7 +69,6 @@
             if (isInverse) {
                 if (/\s/.test(state.before.charAt(lf))) {
                     state.before = strSplice(state.before, lf, 1);
-
                     state.selectionStart--;
                     state.selectionEnd--;
                 }

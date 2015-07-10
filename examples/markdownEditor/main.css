@@ -13,7 +13,7 @@
     width: 800px;
     margin: 0 auto;
     padding: 50px 100px 200px;
-    font-family: sans-serif;
+    font-family: Helvetica, sans-serif;
     white-space: pre-wrap;
     word-wrap: break-word;
     word-break: normal;
@@ -27,15 +27,31 @@ pre:focus {
     outline: none;
 }
 
-.code,
+.code {
+    font-family: Courier, monospace;
+    font-size: 1em;
+}
+
 .pre {
+    color: #555;
+    font-family: Courier, monospace;
+    font-size: 1em;
+    word-break: break-all;
+}
+
+.pre [class*="language-"] {
     color: #2f2f2f;
-    font: normal 1em monospace;
+}
+
+.pre * {
+    font-size: inherit !important;
 }
 
 .tag {
-    color: #2f2f2f;
-    font: bold 1em monospace;
+    color: #555;
+    font-weight: bold;
+    font-family: Courier, monospace;
+    font-size: 1em;
 }
 
 .tag .punctuation,
@@ -50,16 +66,19 @@ pre:focus {
 }
 
 .entity {
-    font: italic 1em monospace;
+    font-style: italic;
+    font-family: Courier, monospace;
+    font-size: 1em;
     color: #555;
 }
 
 .table {
-    font: normal 1em monospace;
+    font-family: Courier, monospace;
+    font-size: 1em;
 }
 
 .table * {
-    font-size: 1em;
+    font-size: inherit;
 }
 
 .comment {
@@ -74,15 +93,15 @@ pre:focus {
 .code,
 .img,
 .imgref,
-.md-toc {
+.cl-toc {
     background-color: #eee;
     border-radius: 4px;
     padding: 0.15em 0;
 }
 
-.link .md-underlined-text,
-.linkref .md-underlined-text {
-    color: inherit;
+.cl-toc {
+    font-size: 2.8em;
+    padding: 0.15em;
 }
 
 .blockquote {
@@ -124,34 +143,34 @@ pre:focus {
     font-size: 0.75em;
 }
 
-.md-hash {
+.cl-hash {
     color: rgba(85, 85, 85, 0.4);
 }
 
-.md,
+.cl,
 .hr {
     color: rgba(85, 85, 85, 0.4);
     font-style: normal;
-    font-weight: normal;
+    font-weight: normal
 }
 
 .em,
-.em .md {
+.em .cl {
     font-style: italic;
 }
 
 .strong,
-.strong .md {
+.strong .cl {
     font-weight: bold;
 }
 
-.md-strike-text {
-    text-decoration: line-through;
+.cl-del-text {
+    text-decoration: line-through
 }
 
 .url,
 .email,
-.md-underlined-text {
+.cl-underlined-text {
     text-decoration: underline;
 }
 
@@ -159,20 +178,41 @@ pre:focus {
     color: rgba(85, 85, 85, 0.4);
 }
 
-.ref {
+.fn,
+.inlinefn,
+.sup {
     position: relative;
     top: -0.5em;
-    font-size: 83%;
+    font-size: smaller;
+}
+
+.sub {
+    position: relative;
+    bottom: -0.25em;
+    font-size: smaller;
+}
+
+.img {
+    display: inline-block;
+}
+
+img {
+    max-width: 100%;
+    padding: 5px;
 }
 
 .img,
-.imgref {
-    padding: 0.2em 0.4em;
-    padding-right: 0;
+.imgref,
+.link,
+.linkref {
+    color: rgba(85, 85, 85, 0.4);
 }
 
-.md-bang,
-.md-alt,
-.md-title {
-    color: rgba(85, 85, 85, 0.4);
+.img .cl-underlined-text,
+.link .cl-underlined-text {
+    color: #2f2f2f;
+}
+
+.cl-title {
+    color: #555;
 }
