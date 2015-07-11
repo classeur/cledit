@@ -8,16 +8,20 @@
         var textContent = editor.getContent();
         var min = Math.min(editor.selectionMgr.selectionStart, editor.selectionMgr.selectionEnd);
         var max = Math.max(editor.selectionMgr.selectionStart, editor.selectionMgr.selectionEnd);
+        var isBackwardSelection = editor.selectionMgr.selectionStart > editor.selectionMgr.selectionEnd;
         var state = {
-            selectionStart: min,
-            selectionEnd: max,
             before: textContent.slice(0, min),
             after: textContent.slice(max),
             selection: textContent.slice(min, max)
         };
         if (this.handler(evt, state, editor)) {
             editor.setContent(state.before + state.selection + state.after, false, min);
-            editor.selectionMgr.setSelectionStartEnd(state.selectionStart, state.selectionEnd);
+            min = state.before.length;
+            max = min + state.selection.length;
+            editor.selectionMgr.setSelectionStartEnd(
+                isBackwardSelection ? max : min,
+                isBackwardSelection ? min : max
+            );
             return true;
         }
     };
@@ -69,24 +73,16 @@
             if (isInverse) {
                 if (/\s/.test(state.before.charAt(lf))) {
                     state.before = strSplice(state.before, lf, 1);
-                    state.selectionStart--;
-                    state.selectionEnd--;
                 }
                 state.selection = state.selection.replace(/^[ \t]/gm, '');
             } else {
                 if (state.selection) {
                     state.before = strSplice(state.before, lf, 0, '\t');
-                    state.selection = state.selection.replace(/\r?\n(?=[\s\S])/g, '\n\t');
-                    state.selectionStart++;
-                    state.selectionEnd++;
+                    state.selection = state.selection.replace(/\n(?=[\s\S])/g, '\n\t');
                 } else {
                     state.before += '\t';
-                    state.selectionStart++;
-                    state.selectionEnd++;
-                    return true;
                 }
             }
-            state.selectionEnd = state.selectionStart + state.selection.length;
             return true;
         }),
 
@@ -102,8 +98,6 @@
             if (clearNewline) {
                 state.before = state.before.substring(0, lf);
                 state.selection = '';
-                state.selectionStart = lf;
-                state.selectionEnd = lf;
                 clearNewline = false;
                 return true;
             }
@@ -117,8 +111,6 @@
             editor.undoMgr.setCurrentMode('single');
             state.before += '\n' + indent;
             state.selection = '';
-            state.selectionStart += indent.length + 1;
-            state.selectionEnd = state.selectionStart;
             return true;
         }),
 
@@ -138,8 +130,6 @@
                 }
             }
             state.selection = '';
-            state.selectionStart = state.before.length;
-            state.selectionEnd = state.selectionStart;
             return true;
         })
     ];
