@@ -50,16 +50,28 @@
 	window.mdGrammar = function(options) {
 		options = options || {};
 		var grammar = {};
-		var insideFcb = options.insideFcb || {};
-		insideFcb["cl cl-pre"] = /`{3}/;
+		var insideFences = options.insideFences || {};
+		insideFences["cl cl-pre"] = /`{3}/;
 		if (options.fences) {
 			grammar['pre gfm'] = {
 				pattern: /^`{3}.*\n(?:[\s\S]*?)\n`{3} *$/gm,
-				inside: insideFcb
+				inside: insideFences
 			};
 		}
 		grammar.li = {
-			pattern: /^ {0,3}(?:[*+\-]|\d+\.)[ \t].+(?:\n[ \t]*\S.*|\n[ \t]*\n( {2}|\t).*)*/gm,
+			pattern: new RegExp(
+				[
+					'^ {0,3}(?:[*+\\-]|\\d+\\.)[ \\t].+\\n', // Item line
+					'(?:',
+					'(?:',
+					'.*\\S.*\\n', // Non-empty line
+					'|',
+					'[ \\t]*\\n(?! ?\\S)', // Or empty line not followed by unindented line
+					')',
+					')*',
+				].join(''),
+				'gm'
+			),
 			inside: {
 				"cl cl-li": /^[ \t]*([*+\-]|\d+\.)[ \t]/gm
 			}
@@ -67,7 +79,7 @@
 		if (options.fences) {
 			grammar.li.inside['pre gfm'] = {
 				pattern: /^((?: {4}|\t)+)`{3}.*\n(?:[\s\S]*?)\n\1`{3}\s*$/gm,
-				inside: insideFcb
+				inside: insideFences
 			};
 		}
 		grammar.blockquote = {
@@ -102,10 +114,10 @@
 				pattern: new RegExp(
 					[
 						'^',
-						'[ \t]*',
+						'[ ]{0,3}',
 						'[|]', // Initial pipe
 						'.+\\n', // Header Row
-						'[ \t]*',
+						'[ ]{0,3}',
 						'[|][ ]*[-:]+[-| :]*\\n', // Separator
 						'(?:[ \t]*[|].*\\n?)*', // Table rows
 						'$'
@@ -118,9 +130,9 @@
 				pattern: new RegExp(
 					[
 						'^',
-						'[ \t]*',
+						'[ ]{0,3}',
 						'\\S.*[|].*\\n', // Header Row
-						'[ \t]*',
+						'[ ]{0,3}',
 						'[-:]+[ ]*[|][-| :]*\\n', // Separator
 						'(?:.*[|].*\\n?)*', // Table rows
 						'$' // Stop at final newline
@@ -129,6 +141,44 @@
 				),
 				inside: {}
 			};
+		}
+		if (options.deflists) {
+			grammar.deflist = {
+				pattern: new RegExp(
+					[
+						'^ {0,3}\\S.*\\n', // Description line
+						'(?:[ \\t]*\\n)?', // Optional empty line
+						'(?:',
+						'[ \\t]*:[ \\t].*\\n', // Colon line
+						'(?:',
+						'(?:',
+						'.*\\S.*\\n', // Non-empty line
+						'|',
+						'[ \\t]*\\n(?! ?\\S)', // Or empty line not followed by unindented line
+						')',
+						')*',
+						'(?:[ \\t]*\\n)*', // Empty lines
+						')+',
+					].join(''),
+					'gm'
+				),
+				inside: {
+					'deflist-desc': {
+						pattern: /( {0,3}\S.*\n(?:[ \t]*\n)?)[\s\S]*/,
+						lookbehind: true,
+						inside: {
+							'cl': /^[ \t]*:[ \t]/gm,
+						}
+					},
+					'term': /.+/g,
+				}
+			};
+			if (options.fences) {
+				grammar.deflist.inside['deflist-desc'].inside['pre gfm'] = {
+					pattern: /^((?: {4}|\t)+)`{3}.*\n(?:[\s\S]*?)\n\1`{3}\s*$/gm,
+					inside: insideFences
+				};
+			}
 		}
 		grammar.hr = {
 			pattern: /^ {0,3}([*\-_] *){3,}$/gm
@@ -179,7 +229,7 @@
 			grammar.p.inside['cl cl-toc'] = /^[ \t]*\[toc\]$/mi;
 		}
 		grammar.pre = {
-			pattern: /((?: {4}|\t).*(?:\n|$))+/g
+			pattern: /(?: {4}|\t).*\S.*\n((?: {4}|\t).*\n)*/g
 		};
 
 		var rest = {};
@@ -339,6 +389,9 @@
 		grammar.li.inside.rest = rest;
 		if (options.footnotes) {
 			grammar.fndef.inside.rest = rest;
+		}
+		if (options.deflists) {
+			grammar.deflist.inside['deflist-desc'].inside.rest = rest;
 		}
 
 		var restLight = {

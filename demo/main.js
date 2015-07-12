@@ -8,6 +8,7 @@ var prismGrammar = window.mdGrammar({
 	tables: true,
 	footnotes: true,
 	abbrs: true,
+	deflists: true,
 	tocs: true,
 	dels: true,
 	subs: true,

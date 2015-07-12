@@ -160,7 +160,8 @@ pre:focus {
 }
 
 .strong,
-.strong .cl {
+.strong .cl,
+.term {
     font-weight: bold;
 }
 
