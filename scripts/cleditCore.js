@@ -166,7 +166,7 @@
 		}, 10);
 
 		function checkContentChange(mutations) {
-			noContentFix || watcher.noWatch(function() {
+			watcher.noWatch(function() {
 				var removedSections = {};
 				var modifiedSections = {};
 
@@ -191,9 +191,9 @@
 				modifiedSections = Object.keys(modifiedSections).map(function(key) {
 					return modifiedSections[key];
 				});
-				highlighter.fixContent(modifiedSections, removedSections);
+				highlighter.fixContent(modifiedSections, removedSections, noContentFix);
+				noContentFix = false;
 			});
-			noContentFix = false;
 			var newTextContent = getTextContent();
 			if (newTextContent && newTextContent == lastTextContent) {
 				return;

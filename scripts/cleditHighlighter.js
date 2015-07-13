@@ -30,17 +30,19 @@
 
         var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
 
-        this.fixContent = function(modifiedSections) {
+        this.fixContent = function(modifiedSections, removedSections, noContentFix) {
             modifiedSections.forEach(function(section) {
                 section.forceHighlighting = true;
-                section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
-                    lfElt.parentNode.removeChild(lfElt);
-                });
-                section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
-                    brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
-                });
-                if (section.elt.textContent.slice(-1) !== '\n') {
-                    section.elt.appendChild(editor.$document.createTextNode('\n'));
+                if (!noContentFix) {
+                    section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
+                        lfElt.parentNode.removeChild(lfElt);
+                    });
+                    section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
+                        brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
+                    });
+                    if (section.elt.textContent.slice(-1) !== '\n') {
+                        section.elt.appendChild(editor.$document.createTextNode('\n'));
+                    }
                 }
             });
         };
