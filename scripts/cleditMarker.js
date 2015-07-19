@@ -4,8 +4,10 @@
 	var DIFF_INSERT = 1;
 	var DIFF_EQUAL = 0;
 
+	var idCounter = 0;
+
 	function Marker(offset) {
-		this.id = Math.random().toString(36).slice(2);
+		this.id = idCounter++;
 		this.offset = offset;
 	}
 

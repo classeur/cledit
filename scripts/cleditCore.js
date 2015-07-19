@@ -167,14 +167,14 @@
 
 		function checkContentChange(mutations) {
 			watcher.noWatch(function() {
-				var removedSections = {};
-				var modifiedSections = {};
+				var removedSections = [];
+				var modifiedSections = [];
 
 				function markModifiedSection(node) {
 					while (node && node !== contentElt) {
 						if (node.section) {
-							(node.parentNode ? modifiedSections : removedSections)[node.section.id] = node.section;
-							return;
+							var array = node.parentNode ? modifiedSections : removedSections;
+							return array.indexOf(node.section) === -1 && array.push(node.section);
 						}
 						node = node.parentNode;
 					}
@@ -184,12 +184,6 @@
 					markModifiedSection(mutation.target);
 					Array.prototype.forEach.call(mutation.addedNodes, markModifiedSection);
 					Array.prototype.forEach.call(mutation.removedNodes, markModifiedSection);
-				});
-				removedSections = Object.keys(removedSections).map(function(key) {
-					return removedSections[key];
-				});
-				modifiedSections = Object.keys(modifiedSections).map(function(key) {
-					return modifiedSections[key];
 				});
 				highlighter.fixContent(modifiedSections, removedSections, noContentFix);
 				noContentFix = false;

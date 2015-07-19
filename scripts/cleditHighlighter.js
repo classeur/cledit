@@ -1,7 +1,6 @@
 (function(cledit) {
 
-    var styleElts = [],
-        sectionCounter = 0;
+    var styleElts = [];
 
     function createStyleSheet(document) {
         var styleElt = document.createElement('style');
@@ -53,7 +52,6 @@
         };
 
         function Section(text) {
-            this.id = ++sectionCounter;
             this.text = text;
         }
 
@@ -127,8 +125,6 @@
                     rightIndex = leftIndex - sectionList.length;
                 }
 
-                // Create an array composed of left unmodified, modified, right
-                // unmodified sections
                 var leftSections = sectionList.slice(0, leftIndex);
                 modifiedSections = newSectionList.slice(leftIndex, newSectionList.length + rightIndex);
                 var rightSections = sectionList.slice(sectionList.length + rightIndex, sectionList.length);
@@ -184,7 +180,6 @@
         function highlight(section) {
             var html = editor.options.highlighter(section.text).replace(/\n/g, lfHtml);
             var sectionElt = editor.$document.createElement('div');
-            sectionElt.id = 'cledit-section-' + section.id;
             sectionElt.className = 'cledit-section';
             sectionElt.innerHTML = html;
             section.setElement(sectionElt);
