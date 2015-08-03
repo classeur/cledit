@@ -23,17 +23,12 @@
 		};
 		editor.toggleEditable(true);
 
-
 		function getTextContent() {
 			var textContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
 			if (textContent.slice(-1) !== '\n') {
 				textContent += '\n';
 			}
 			return textContent;
-		}
-
-		function getLastContent() {
-			return lastTextContent;
 		}
 
 		var lastTextContent = getTextContent();
@@ -340,7 +335,6 @@
 		editor.replaceAll = replaceAll;
 		editor.replacePreviousText = replacePreviousText;
 		editor.getContent = getTextContent;
-		editor.getLastContent = getLastContent;
 		editor.focus = focus;
 		editor.setSelection = setSelection;
 		editor.addKeystroke = addKeystroke;
