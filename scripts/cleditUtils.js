@@ -6,14 +6,14 @@
 		isMsie: 'msTransform' in document.documentElement.style
 	};
 
-	// Faster than setTimeout (see http://dbaron.org/log/20100309-faster-timeouts)
+	// Faster than setTimeout(0). Credit: http://dbaron.org/log/20100309-faster-timeouts
 	Utils.defer = (function() {
 		var timeouts = [];
 		var messageName = 'deferMsg';
 		window.addEventListener('message', function(evt) {
-			if(evt.source == window && evt.data == messageName) {
+			if (evt.source == window && evt.data == messageName) {
 				evt.stopPropagation();
-				if(timeouts.length > 0) {
+				if (timeouts.length > 0) {
 					timeouts.shift()();
 				}
 			}
@@ -25,21 +25,20 @@
 	})();
 
 	Utils.debounce = function(func, wait) {
-		var timeoutId, isExpected = false;
+		var timeoutId, isExpected;
 		return wait ?
 			function() {
 				clearTimeout(timeoutId);
 				timeoutId = setTimeout(func, wait);
 			} :
 			function() {
-				if(isExpected === true) {
-					return;
+				if (!isExpected) {
+					isExpected = true;
+					Utils.defer(function() {
+						isExpected = false;
+						func();
+					});
 				}
-				isExpected = true;
-				Utils.defer(function() {
-					isExpected = false;
-					func();
-				});
 			};
 	};
 
@@ -47,20 +46,18 @@
 		var listenerMap = {};
 		object.$trigger = function(eventType) {
 			var listeners = listenerMap[eventType];
-			if(listeners) {
+			if (listeners) {
 				var args = Array.prototype.slice.call(arguments, 1);
 				listeners.forEach(function(listener) {
 					try {
 						listener.apply(object, args);
-					}
-					catch(e) {
-					}
+					} catch (e) {}
 				});
 			}
 		};
 		object.on = function(eventType, listener) {
 			var listeners = listenerMap[eventType];
-			if(!listeners) {
+			if (!listeners) {
 				listeners = [];
 				listenerMap[eventType] = listeners;
 			}
@@ -68,9 +65,9 @@
 		};
 		object.off = function(eventType, listener) {
 			var listeners = listenerMap[eventType];
-			if(listeners) {
+			if (listeners) {
 				var index = listeners.indexOf(listener);
-				if(index > -1) {
+				if (index > -1) {
 					listeners.splice(index, 1);
 				}
 			}
