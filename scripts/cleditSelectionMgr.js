@@ -17,41 +17,15 @@
 		this.adjustBottom = 0;
 
 		this.findContainer = function(offset) {
-			function makeResult(container, offsetInContainer) {
-				if (container.nodeValue === '\n') {
-					var hdLfElt = container.parentNode;
-					if (hdLfElt.className === 'hd-lf' && hdLfElt.previousSibling && hdLfElt.previousSibling.tagName === 'BR') {
-						container = hdLfElt.parentNode;
-						offsetInContainer = Array.prototype.indexOf.call(container.childNodes, offsetInContainer === 0 ? hdLfElt.previousSibling : hdLfElt);
-					}
+			var result = cledit.Utils.findContainer(contentElt, offset);
+			if (result.container.nodeValue === '\n') {
+				var hdLfElt = result.container.parentNode;
+				if (hdLfElt.className === 'hd-lf' && hdLfElt.previousSibling && hdLfElt.previousSibling.tagName === 'BR') {
+					result.container = hdLfElt.parentNode;
+					result.offsetInContainer = Array.prototype.indexOf.call(result.container.childNodes, result.offsetInContainer === 0 ? hdLfElt.previousSibling : hdLfElt);
 				}
-				return {
-					container: container,
-					offsetInContainer: offsetInContainer
-				};
 			}
-			var containerOffset = 0,
-				container, elt = contentElt;
-			do {
-				container = elt;
-				elt = elt.firstChild;
-				if (elt) {
-					do {
-						var len = elt.textContent.length;
-						if (containerOffset <= offset && containerOffset + len > offset) {
-							break;
-						}
-						containerOffset += len;
-					} while (elt = elt.nextSibling);
-				}
-			} while (elt && elt.firstChild && elt.nodeType !== 3);
-			if (elt) {
-				return makeResult(elt, offset - containerOffset);
-			}
-			while (container.lastChild) {
-				container = container.lastChild;
-			}
-			return makeResult(container, container.nodeType === 3 ? container.textContent.length : 0);
+			return result;
 		};
 
 		this.createRange = function(start, end) {
@@ -274,7 +248,7 @@
 						var selectionText = selectionRange + '';
 						// Fix end of line when only br is selected
 						var brElt = selectionRange.endContainer.firstChild;
-						if(brElt && brElt.tagName === 'BR' && selectionRange.endOffset === 1) {
+						if (brElt && brElt.tagName === 'BR' && selectionRange.endOffset === 1) {
 							selectionText += '\n';
 						}
 						if (comparePoints(selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset) == 1) {

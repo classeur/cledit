@@ -81,6 +81,37 @@
 		return object;
 	};
 
+	Utils.findContainer = function(elt, offset) {
+		var containerOffset = 0,
+			container;
+		do {
+			container = elt;
+			elt = elt.firstChild;
+			if (elt) {
+				do {
+					var len = elt.textContent.length;
+					if (containerOffset <= offset && containerOffset + len > offset) {
+						break;
+					}
+					containerOffset += len;
+				} while ((elt = elt.nextSibling));
+			}
+		} while (elt && elt.firstChild && elt.nodeType !== 3);
+		if (elt) {
+			return {
+				container: elt,
+				offsetInContainer: offset - containerOffset
+			};
+		}
+		while (container.lastChild) {
+			container = container.lastChild;
+		}
+		return {
+			container: container,
+			offsetInContainer: container.nodeType === 3 ? container.textContent.length : 0
+		};
+	};
+
 	cledit.Utils = Utils;
 
 })(window.cledit);
