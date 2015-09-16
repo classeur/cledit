@@ -4,8 +4,9 @@
 		this.isWatching = false;
 		var contentObserver;
 		this.startWatching = function() {
+			this.stopWatching();
 			this.isWatching = true;
-			contentObserver = contentObserver || new MutationObserver(listener);
+			contentObserver = new MutationObserver(listener);
 			contentObserver.observe(editor.$contentElt, {
 				childList: true,
 				subtree: true,
@@ -13,7 +14,10 @@
 			});
 		};
 		this.stopWatching = function() {
-			contentObserver.disconnect();
+			if(contentObserver) {
+				contentObserver.disconnect();
+				contentObserver = undefined;
+			}
 			this.isWatching = false;
 		};
 		this.noWatch = function(cb) {
