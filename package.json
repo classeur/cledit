@@ -7,12 +7,10 @@
     "type": "git",
     "url": "git://github.com/classeur/cledit.git"
   },
-  "scripts": {
-    "install": "gulp"
-  },
+  "scripts": {},
   "author": "Benoit Schweblin",
   "license": "Apache-2.0",
-  "dependencies": {
+  "devDependencies": {
     "gulp": "^3.8.10",
     "gulp-concat": "^2.5.1",
     "gulp-connect": "^2.2.0",
