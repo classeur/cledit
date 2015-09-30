@@ -324,12 +324,11 @@
 				isInvisible = true;
 				containerElt = editor.$allElements[--index];
 			}
+			var rect,
+				contentRect,
+				left = 'left';
 			if (isInvisible || container.textContent == '\n') {
-				return {
-					top: containerElt.offsetTop,
-					height: containerElt.offsetHeight,
-					left: containerElt.offsetLeft
-				};
+				rect = containerElt.getBoundingClientRect();
 			} else {
 				var selectedChar = editor.getContent()[inputOffset];
 				var startOffset = {
@@ -340,7 +339,6 @@
 					container: container,
 					offsetInContainer: offsetInContainer
 				};
-				var left = 'left';
 				if (inputOffset > 0 && (selectedChar === undefined || selectedChar == '\n')) {
 					left = 'right';
 					if (startOffset.offsetInContainer === 0) {
@@ -358,13 +356,14 @@
 					}
 				}
 				var range = this.createRange(startOffset, endOffset);
-				var rect = range.getBoundingClientRect();
-				return {
-					top: Math.round(rect.top - contentElt.getBoundingClientRect().top + contentElt.scrollTop),
-					height: Math.round(rect.height),
-					left: Math.round(rect[left] - contentElt.getBoundingClientRect().left + contentElt.scrollLeft)
-				};
+				rect = range.getBoundingClientRect();
 			}
+			contentRect = contentElt.getBoundingClientRect();
+			return {
+				top: Math.round(rect.top - contentRect.top + contentElt.scrollTop),
+				height: Math.round(rect.height),
+				left: Math.round(rect[left] - contentRect.left + contentElt.scrollLeft)
+			};
 		};
 
 		this.getClosestWordOffset = function(offset) {
