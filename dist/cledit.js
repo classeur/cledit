@@ -412,12 +412,14 @@
             modifiedSections.forEach(function(section) {
                 section.forceHighlighting = true;
                 if (!noContentFix) {
-                    section.hiddenLfEltList && Array.prototype.slice.call(section.hiddenLfEltList).forEach(function(lfElt) {
-                        lfElt.parentNode.removeChild(lfElt);
-                    });
-                    section.brEltList && Array.prototype.slice.call(section.brEltList).forEach(function(brElt) {
-                        brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
-                    });
+                    if (useBr) {
+                        Array.prototype.slice.call(section.elt.getElementsByClassName('hd-lf')).forEach(function(lfElt) {
+                            lfElt.parentNode.removeChild(lfElt);
+                        });
+                        Array.prototype.slice.call(section.elt.getElementsByTagName('br')).forEach(function(brElt) {
+                            brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
+                        });
+                    }
                     if (section.elt.textContent.slice(-1) !== '\n') {
                         section.elt.appendChild(editor.$document.createTextNode('\n'));
                     }
@@ -437,12 +439,6 @@
         Section.prototype.setElement = function(elt) {
             this.elt = elt;
             elt.section = this;
-
-            // Live collections
-            if (useBr) {
-                this.hiddenLfEltList = elt.getElementsByClassName('hd-lf');
-                this.brEltList = elt.getElementsByTagName('br');
-            }
         };
 
         this.parseSections = function(content, isInit) {
@@ -1078,12 +1074,11 @@
 				isInvisible = true;
 				containerElt = editor.$allElements[--index];
 			}
+			var rect,
+				contentRect,
+				left = 'left';
 			if (isInvisible || container.textContent == '\n') {
-				return {
-					top: containerElt.offsetTop,
-					height: containerElt.offsetHeight,
-					left: containerElt.offsetLeft
-				};
+				rect = containerElt.getBoundingClientRect();
 			} else {
 				var selectedChar = editor.getContent()[inputOffset];
 				var startOffset = {
@@ -1094,7 +1089,6 @@
 					container: container,
 					offsetInContainer: offsetInContainer
 				};
-				var left = 'left';
 				if (inputOffset > 0 && (selectedChar === undefined || selectedChar == '\n')) {
 					left = 'right';
 					if (startOffset.offsetInContainer === 0) {
@@ -1112,13 +1106,14 @@
 					}
 				}
 				var range = this.createRange(startOffset, endOffset);
-				var rect = range.getBoundingClientRect();
-				return {
-					top: Math.round(rect.top - contentElt.getBoundingClientRect().top + contentElt.scrollTop),
-					height: Math.round(rect.height),
-					left: Math.round(rect[left] - contentElt.getBoundingClientRect().left + contentElt.scrollLeft)
-				};
+				rect = range.getBoundingClientRect();
 			}
+			contentRect = contentElt.getBoundingClientRect();
+			return {
+				top: Math.round(rect.top - contentRect.top + contentElt.scrollTop),
+				height: Math.round(rect.height),
+				left: Math.round(rect[left] - contentRect.left + contentElt.scrollLeft)
+			};
 		};
 
 		this.getClosestWordOffset = function(offset) {
@@ -1435,8 +1430,9 @@
 		this.isWatching = false;
 		var contentObserver;
 		this.startWatching = function() {
+			this.stopWatching();
 			this.isWatching = true;
-			contentObserver = contentObserver || new MutationObserver(listener);
+			contentObserver = new MutationObserver(listener);
 			contentObserver.observe(editor.$contentElt, {
 				childList: true,
 				subtree: true,
@@ -1444,7 +1440,10 @@
 			});
 		};
 		this.stopWatching = function() {
-			contentObserver.disconnect();
+			if(contentObserver) {
+				contentObserver.disconnect();
+				contentObserver = undefined;
+			}
 			this.isWatching = false;
 		};
 		this.noWatch = function(cb) {
