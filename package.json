@@ -1,6 +1,6 @@
 {
   "name": "cledit",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Classeur ContentEditable engine",
   "main": "dist/cledit.js",
   "repository": {
@@ -10,16 +10,15 @@
   "scripts": {},
   "author": "Benoit Schweblin",
   "license": "Apache-2.0",
-  "devDependencies": {},
-  "bugs": {
-    "url": "https://github.com/classeur/cledit/issues"
-  },
-  "homepage": "https://github.com/classeur/cledit#readme",
   "devDependencies": {
     "clunderscore": "^0.1.0",
     "googlediff": "^0.1.0",
     "prismjs": "0.0.1",
     "gulp-bump": "^1.0.0",
     "gulp-util": "^3.0.6"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/classeur/cledit/issues"
+  },
+  "homepage": "https://github.com/classeur/cledit#readme"
 }
