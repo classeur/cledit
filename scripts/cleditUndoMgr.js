@@ -4,10 +4,10 @@
 	function UndoMgr(editor, options) {
 		cledit.Utils.createEventHooks(this);
 
-		options = cledit.Utils.extend({
+		options = ({
 			undoStackMaxSize: 200,
 			bufferStateUntilIdle: 1000
-		}, options || {});
+		}).cl_extend(options || {});
 
 		var self = this;
 		var selectionMgr;
@@ -62,7 +62,7 @@
 		this.setCurrentMode = function(mode) {
 			stateMgr.currentMode = mode;
 		};
-		this.setDefaultMode = stateMgr.setDefaultMode.bind(stateMgr);
+		this.setDefaultMode = stateMgr.setDefaultMode.cl_bind(stateMgr);
 
 		var diffMatchPatch = new diff_match_patch();
 
@@ -105,8 +105,8 @@
 			var content = editor.getContent();
 			if(!isForward) {
 				patches = diffMatchPatch.patch_deepCopy(patches).reverse();
-				patches.forEach(function(patch) {
-					patch.diffs.forEach(function(diff) {
+				patches.cl_each(function(patch) {
+					patch.diffs.cl_each(function(diff) {
 						diff[0] = -diff[0];
 					});
 				});
@@ -116,8 +116,8 @@
 			var range = editor.setContent(newContent, true);
 
 			var diffs = diffMatchPatch.diff_main(content, newContent);
-			Object.keys(editor.$markers).forEach(function(id) {
-				editor.$markers[id].adjustOffset(diffs);
+			editor.$markers.cl_each(function(marker) {
+				marker.adjustOffset(diffs);
 			});
 
 			selectionMgr.setSelectionStartEnd(range.end, range.end);

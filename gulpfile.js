@@ -29,14 +29,19 @@ gulp.task('connect', function() {
     });
 });
 
+var scripts = [
+    'node_modules/clunderscore/clunderscore.js',
+    'scripts/*.js'
+];
+
 gulp.task('build-js', function() {
-    return gulp.src('scripts/*.js')
+    return gulp.src(scripts)
         .pipe(concat('cledit.js'))
         .pipe(gulp.dest('dist'));
 });
 
 gulp.task('build-js-min', function() {
-    return gulp.src('scripts/*.js')
+    return gulp.src(scripts)
         .pipe(concat('cledit-min.js'))
         .pipe(uglify())
         .pipe(gulp.dest('dist'));

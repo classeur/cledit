@@ -48,7 +48,7 @@
 			var listeners = listenerMap[eventType];
 			if (listeners) {
 				var args = Array.prototype.slice.call(arguments, 1);
-				listeners.forEach(function(listener) {
+				listeners.cl_each(function(listener) {
 					try {
 						listener.apply(object, args);
 					} catch (e) {}
@@ -72,13 +72,6 @@
 				}
 			}
 		};
-	};
-
-	Utils.extend = function(object, options) {
-		Object.keys(options).map(function(prop) {
-			object[prop] = options[prop];
-		});
-		return object;
 	};
 
 	Utils.findContainer = function(elt, offset) {

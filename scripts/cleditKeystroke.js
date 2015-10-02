@@ -1,7 +1,8 @@
 (function(cledit) {
 
-    function Keystroke(handler) {
+    function Keystroke(handler, priority) {
         this.handler = handler;
+        this.priority = priority || 100;
     }
 
     Keystroke.prototype.perform = function(evt, editor) {

@@ -1,380 +1,530 @@
+/* global HTMLCollection, NodeList */
+(function() {
+
+	var arrayProperties = {},
+		liveCollectionProperties = {},
+		functionProperties = {},
+		objectProperties = {},
+		slice = Array.prototype.slice;
+
+	arrayProperties.cl_each = function(cb) {
+		var i = 0,
+			length = this.length;
+		for (; i < length; i++) {
+			cb(this[i], i, this);
+		}
+	};
+
+	arrayProperties.cl_map = function(cb) {
+		var i = 0,
+			length = this.length,
+			result = Array(length);
+		for (; i < length; i++) {
+			result[i] = cb(this[i], i, this);
+		}
+		return result;
+	};
+
+	arrayProperties.cl_reduce = function(cb, memo) {
+		var i = 0,
+			length = this.length;
+		for (; i < length; i++) {
+			memo = cb(memo, this[i], i, this);
+		}
+		return memo;
+	};
+
+	arrayProperties.cl_some = function(cb) {
+		var i = 0,
+			length = this.length;
+		for (; i < length; i++) {
+			if (cb(this[i], i, this)) {
+				return true;
+			}
+		}
+	};
+
+	arrayProperties.cl_filter = function(cb) {
+		var i = 0,
+			length = this.length,
+			result = [];
+		for (; i < length; i++) {
+			cb(this[i], i, this) && result.push(this[i]);
+		}
+		return result;
+	};
+
+	liveCollectionProperties.cl_each = function(cb) {
+		slice.call(this).cl_each(cb);
+	};
+
+	liveCollectionProperties.cl_map = function(cb) {
+		return slice.call(this).cl_map(cb);
+	};
+
+	liveCollectionProperties.cl_reduce = function(cb, memo) {
+		return slice.call(this).cl_reduce(cb, memo);
+	};
+
+	functionProperties.cl_bind = function(context) {
+		var self = this,
+			args = slice.call(arguments, 1);
+		context = context || null;
+		return args.length ?
+			function() {
+				return arguments.length ?
+					self.apply(context, args.concat(slice.call(arguments))) :
+					self.apply(context, args);
+			} :
+			function() {
+				return arguments.length ?
+					self.apply(context, arguments) :
+					self.call(context);
+			};
+	};
+
+	objectProperties.cl_each = function(cb) {
+		var i = 0,
+			keys = Object.keys(this),
+			length = keys.length;
+		for (; i < length; i++) {
+			cb(this[keys[i]], keys[i], this);
+		}
+	};
+
+	objectProperties.cl_map = function(cb) {
+		var i = 0,
+			keys = Object.keys(this),
+			length = keys.length,
+			result = Array(length);
+		for (; i < length; i++) {
+			result[i] = cb(this[keys[i]], keys[i], this);
+		}
+		return result;
+	};
+
+	objectProperties.cl_reduce = function(cb, memo) {
+		var i = 0,
+			keys = Object.keys(this),
+			length = keys.length;
+		for (; i < length; i++) {
+			memo = cb(memo, this[keys[i]], keys[i], this);
+		}
+		return memo;
+	};
+
+	objectProperties.cl_extend = function(obj) {
+		if (obj) {
+			var i = 0,
+				keys = Object.keys(obj),
+				length = keys.length;
+			for (; i < length; i++) {
+				this[keys[i]] = obj[keys[i]];
+			}
+		}
+		return this;
+	};
+
+	function build(properties) {
+		return objectProperties.cl_reduce.call(properties, function(memo, value, key) {
+			memo[key] = {
+				value: value
+			};
+			return memo;
+		}, {});
+	}
+
+	arrayProperties = build(arrayProperties);
+	liveCollectionProperties = build(liveCollectionProperties);
+	functionProperties = build(functionProperties);
+	objectProperties = build(objectProperties);
+
+	Object.defineProperties(Array.prototype, arrayProperties);
+	Object.defineProperties(Function.prototype, functionProperties);
+	Object.defineProperties(Object.prototype, objectProperties);
+	if (typeof window != 'undefined') {
+		Object.defineProperties(HTMLCollection.prototype, liveCollectionProperties);
+		Object.defineProperties(NodeList.prototype, liveCollectionProperties);
+	}
+
+})();
+
 /* jshint -W084, -W099 */
 
 (function(diff_match_patch) {
 
-	function cledit(contentElt, scrollElt, windowParam) {
-		scrollElt = scrollElt || contentElt;
-		var editor = {
-			$contentElt: contentElt,
-			$scrollElt: scrollElt,
-			$window: windowParam || window,
-			$keystrokes: [],
-			$markers: {}
-		};
-		editor.$document = editor.$window.document;
-		cledit.Utils.createEventHooks(editor);
-		var debounce = cledit.Utils.debounce;
+    function cledit(contentElt, scrollElt, windowParam) {
+        scrollElt = scrollElt || contentElt;
+        var editor = {
+            $contentElt: contentElt,
+            $scrollElt: scrollElt,
+            $window: windowParam || window,
+            $keystrokes: [],
+            $markers: {}
+        };
+        editor.$document = editor.$window.document;
+        cledit.Utils.createEventHooks(editor);
+        var debounce = cledit.Utils.debounce;
 
-		editor.toggleEditable = function(isEditable) {
-			if (isEditable === undefined) {
-				isEditable = !contentElt.contentEditable;
-			}
-			contentElt.contentEditable = isEditable;
-		};
-		editor.toggleEditable(true);
+        editor.toggleEditable = function(isEditable) {
+            if (isEditable === undefined) {
+                isEditable = !contentElt.contentEditable;
+            }
+            contentElt.contentEditable = isEditable;
+        };
+        editor.toggleEditable(true);
 
-		function getTextContent() {
-			var textContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
-			if (textContent.slice(-1) !== '\n') {
-				textContent += '\n';
-			}
-			return textContent;
-		}
+        function getTextContent() {
+            var textContent = contentElt.textContent.replace(/\r\n?/g, '\n'); // Mac/DOS to Unix
+            if (textContent.slice(-1) !== '\n') {
+                textContent += '\n';
+            }
+            return textContent;
+        }
 
-		var lastTextContent = getTextContent();
-		var highlighter = new cledit.Highlighter(editor);
+        var lastTextContent = getTextContent();
+        var highlighter = new cledit.Highlighter(editor);
 
-		var sectionList;
+        var sectionList;
 
-		function parseSections(content, isInit) {
-			sectionList = highlighter.parseSections(content, isInit);
-			editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.cledit-section *'));
-			editor.$trigger('contentChanged', content, sectionList);
-		}
+        function parseSections(content, isInit) {
+            sectionList = highlighter.parseSections(content, isInit);
+            editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.cledit-section *'));
+            editor.$trigger('contentChanged', content, sectionList);
+        }
 
-		// Used to detect editor changes
-		var watcher = new cledit.Watcher(editor, checkContentChange);
-		watcher.startWatching();
+        // Used to detect editor changes
+        var watcher = new cledit.Watcher(editor, checkContentChange);
+        watcher.startWatching();
 
-		var diffMatchPatch = new diff_match_patch();
-		var selectionMgr = new cledit.SelectionMgr(editor);
+        var diffMatchPatch = new diff_match_patch();
+        var selectionMgr = new cledit.SelectionMgr(editor);
 
-		function adjustCursorPosition(force) {
-			selectionMgr.saveSelectionState(true, true, force);
-		}
+        function adjustCursorPosition(force) {
+            selectionMgr.saveSelectionState(true, true, force);
+        }
 
-		function replaceContent(selectionStart, selectionEnd, replacement) {
-			var min = Math.min(selectionStart, selectionEnd);
-			var max = Math.max(selectionStart, selectionEnd);
-			var range = selectionMgr.createRange(min, max);
-			var rangeText = '' + range;
-			// Range can contain a br element, which is not taken into account in rangeText
-			if (rangeText.length === max - min && rangeText == replacement) {
-				return;
-			}
-			range.deleteContents();
-			range.insertNode(editor.$document.createTextNode(replacement));
-			return range;
-		}
+        function replaceContent(selectionStart, selectionEnd, replacement) {
+            var min = Math.min(selectionStart, selectionEnd);
+            var max = Math.max(selectionStart, selectionEnd);
+            var range = selectionMgr.createRange(min, max);
+            var rangeText = '' + range;
+            // Range can contain a br element, which is not taken into account in rangeText
+            if (rangeText.length === max - min && rangeText == replacement) {
+                return;
+            }
+            range.deleteContents();
+            range.insertNode(editor.$document.createTextNode(replacement));
+            return range;
+        }
 
-		var ignorePatches = false,
-			noContentFix = false;
+        var ignorePatches = false,
+            noContentFix = false;
 
-		function setContent(value, noUndo, maxStartOffset) {
-			var textContent = getTextContent();
-			maxStartOffset = maxStartOffset !== undefined && maxStartOffset < textContent.length ? maxStartOffset : textContent.length - 1;
-			var startOffset = Math.min(
-				diffMatchPatch.diff_commonPrefix(textContent, value),
-				maxStartOffset
-			);
-			var endOffset = Math.min(
-				diffMatchPatch.diff_commonSuffix(textContent, value),
-				textContent.length - startOffset,
-				value.length - startOffset
-			);
-			var replacement = value.substring(startOffset, value.length - endOffset);
-			var range = replaceContent(startOffset, textContent.length - endOffset, replacement);
-			if (range) {
-				ignorePatches = noUndo;
-				noContentFix = true;
-			}
-			return {
-				start: startOffset,
-				end: value.length - endOffset,
-				range: range
-			};
-		}
+        function setContent(value, noUndo, maxStartOffset) {
+            var textContent = getTextContent();
+            maxStartOffset = maxStartOffset !== undefined && maxStartOffset < textContent.length ? maxStartOffset : textContent.length - 1;
+            var startOffset = Math.min(
+                diffMatchPatch.diff_commonPrefix(textContent, value),
+                maxStartOffset
+            );
+            var endOffset = Math.min(
+                diffMatchPatch.diff_commonSuffix(textContent, value),
+                textContent.length - startOffset,
+                value.length - startOffset
+            );
+            var replacement = value.substring(startOffset, value.length - endOffset);
+            var range = replaceContent(startOffset, textContent.length - endOffset, replacement);
+            if (range) {
+                ignorePatches = noUndo;
+                noContentFix = true;
+            }
+            return {
+                start: startOffset,
+                end: value.length - endOffset,
+                range: range
+            };
+        }
 
-		function replace(selectionStart, selectionEnd, replacement) {
-			undoMgr.setDefaultMode('single');
-			replaceContent(selectionStart, selectionEnd, replacement);
-			var endOffset = selectionStart + replacement.length;
-			selectionMgr.setSelectionStartEnd(endOffset, endOffset);
-			selectionMgr.updateCursorCoordinates(true);
-		}
+        function replace(selectionStart, selectionEnd, replacement) {
+            undoMgr.setDefaultMode('single');
+            replaceContent(selectionStart, selectionEnd, replacement);
+            var endOffset = selectionStart + replacement.length;
+            selectionMgr.setSelectionStartEnd(endOffset, endOffset);
+            selectionMgr.updateCursorCoordinates(true);
+        }
 
-		function replaceAll(search, replacement) {
-			undoMgr.setDefaultMode('single');
-			var textContent = getTextContent();
-			var value = textContent.replace(search, replacement);
-			if (value != textContent) {
-				var offset = editor.setContent(value);
-				selectionMgr.setSelectionStartEnd(offset.end, offset.end);
-				selectionMgr.updateCursorCoordinates(true);
-			}
-		}
+        function replaceAll(search, replacement) {
+            undoMgr.setDefaultMode('single');
+            var textContent = getTextContent();
+            var value = textContent.replace(search, replacement);
+            if (value != textContent) {
+                var offset = editor.setContent(value);
+                selectionMgr.setSelectionStartEnd(offset.end, offset.end);
+                selectionMgr.updateCursorCoordinates(true);
+            }
+        }
 
-		function replacePreviousText(text, replacement) {
-			var offset = selectionMgr.selectionStart;
-			if (offset !== selectionMgr.selectionEnd) {
-				return false;
-			}
-			var range = selectionMgr.createRange(offset - text.length, offset);
-			if ('' + range != text) {
-				return false;
-			}
-			range.deleteContents();
-			range.insertNode(editor.$document.createTextNode(replacement));
-			offset = offset - text.length + replacement.length;
-			selectionMgr.setSelectionStartEnd(offset, offset);
-			selectionMgr.updateCursorCoordinates(true);
-			return true;
-		}
+        function replacePreviousText(text, replacement) {
+            var offset = selectionMgr.selectionStart;
+            if (offset !== selectionMgr.selectionEnd) {
+                return false;
+            }
+            var range = selectionMgr.createRange(offset - text.length, offset);
+            if ('' + range != text) {
+                return false;
+            }
+            range.deleteContents();
+            range.insertNode(editor.$document.createTextNode(replacement));
+            offset = offset - text.length + replacement.length;
+            selectionMgr.setSelectionStartEnd(offset, offset);
+            selectionMgr.updateCursorCoordinates(true);
+            return true;
+        }
 
-		function focus() {
-			selectionMgr.restoreSelection();
-		}
+        function focus() {
+            selectionMgr.restoreSelection();
+        }
 
-		var undoMgr = new cledit.UndoMgr(editor);
+        var undoMgr = new cledit.UndoMgr(editor);
 
-		function addMarker(marker) {
-			editor.$markers[marker.id] = marker;
-		}
+        function addMarker(marker) {
+            editor.$markers[marker.id] = marker;
+        }
 
-		function removeMarker(marker) {
-			delete editor.$markers[marker.id];
-		}
+        function removeMarker(marker) {
+            delete editor.$markers[marker.id];
+        }
 
-		var triggerSpellCheck = debounce(function() {
-			var selection = editor.$window.getSelection();
-			if (!selectionMgr.hasFocus || highlighter.isComposing || selectionMgr.selectionStart !== selectionMgr.selectionEnd || !selection.modify) {
-				return;
-			}
-			// Hack for Chrome to trigger the spell checker
-			if (selectionMgr.selectionStart) {
-				selection.modify("move", "backward", "character");
-				selection.modify("move", "forward", "character");
-			} else {
-				selection.modify("move", "forward", "character");
-				selection.modify("move", "backward", "character");
-			}
-		}, 10);
+        var triggerSpellCheck = debounce(function() {
+            var selection = editor.$window.getSelection();
+            if (!selectionMgr.hasFocus || highlighter.isComposing || selectionMgr.selectionStart !== selectionMgr.selectionEnd || !selection.modify) {
+                return;
+            }
+            // Hack for Chrome to trigger the spell checker
+            if (selectionMgr.selectionStart) {
+                selection.modify("move", "backward", "character");
+                selection.modify("move", "forward", "character");
+            } else {
+                selection.modify("move", "forward", "character");
+                selection.modify("move", "backward", "character");
+            }
+        }, 10);
 
-		function checkContentChange(mutations) {
-			watcher.noWatch(function() {
-				var removedSections = [];
-				var modifiedSections = [];
+        function checkContentChange(mutations) {
+            watcher.noWatch(function() {
+                var removedSections = [];
+                var modifiedSections = [];
 
-				function markModifiedSection(node) {
-					while (node && node !== contentElt) {
-						if (node.section) {
-							var array = node.parentNode ? modifiedSections : removedSections;
-							return array.indexOf(node.section) === -1 && array.push(node.section);
-						}
-						node = node.parentNode;
-					}
-				}
+                function markModifiedSection(node) {
+                    while (node && node !== contentElt) {
+                        if (node.section) {
+                            var array = node.parentNode ? modifiedSections : removedSections;
+                            return array.indexOf(node.section) === -1 && array.push(node.section);
+                        }
+                        node = node.parentNode;
+                    }
+                }
 
-				mutations.forEach(function(mutation) {
-					markModifiedSection(mutation.target);
-					Array.prototype.forEach.call(mutation.addedNodes, markModifiedSection);
-					Array.prototype.forEach.call(mutation.removedNodes, markModifiedSection);
-				});
-				highlighter.fixContent(modifiedSections, removedSections, noContentFix);
-				noContentFix = false;
-			});
-			var newTextContent = getTextContent();
-			if (newTextContent && newTextContent == lastTextContent) {
-				return;
-			}
-			var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent);
-			if (!ignorePatches) {
-				var patches = diffMatchPatch.patch_make(lastTextContent, diffs);
-				undoMgr.addPatches(patches);
-				undoMgr.setDefaultMode('typing');
-			}
+                mutations.cl_each(function(mutation) {
+                    markModifiedSection(mutation.target);
+                    mutation.addedNodes.cl_each(markModifiedSection);
+                    mutation.removedNodes.cl_each(markModifiedSection);
+                });
+                highlighter.fixContent(modifiedSections, removedSections, noContentFix);
+                noContentFix = false;
+            });
+            var newTextContent = getTextContent();
+            if (newTextContent && newTextContent == lastTextContent) {
+                return;
+            }
+            var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent);
+            if (!ignorePatches) {
+                var patches = diffMatchPatch.patch_make(lastTextContent, diffs);
+                undoMgr.addPatches(patches);
+                undoMgr.setDefaultMode('typing');
+            }
 
-			Object.keys(editor.$markers).forEach(function(id) {
-				editor.$markers[id].adjustOffset(diffs);
-			});
+            editor.$markers.cl_each(function(marker) {
+                marker.adjustOffset(diffs);
+            });
 
-			lastTextContent = newTextContent;
-			selectionMgr.saveSelectionState();
-			parseSections(lastTextContent);
-			ignorePatches || undoMgr.saveState();
-			ignorePatches = false;
-			triggerSpellCheck();
-		}
+            lastTextContent = newTextContent;
+            selectionMgr.saveSelectionState();
+            parseSections(lastTextContent);
+            ignorePatches || undoMgr.saveState();
+            ignorePatches = false;
+            triggerSpellCheck();
+        }
 
-		// See https://gist.github.com/shimondoodkin/1081133
-		// TODO
-		/*
-		 if(/AppleWebKit\/([\d.]+)/.exec(navigator.userAgent)) {
-		 var $editableFix = $('<input style="width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html');
-		 $contentElt.blur(function() {
-		 $editableFix[0].setSelectionRange(0, 0);
-		 $editableFix.blur();
-		 });
-		 }
-		 */
+        // See https://gist.github.com/shimondoodkin/1081133
+        // TODO
+        /*
+         if(/AppleWebKit\/([\d.]+)/.exec(navigator.userAgent)) {
+         var $editableFix = $('<input style="width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html');
+         $contentElt.blur(function() {
+         $editableFix[0].setSelectionRange(0, 0);
+         $editableFix.blur();
+         });
+         }
+         */
 
-		function setSelection(start, end) {
-			end = end === undefined ? start : end;
-			selectionMgr.setSelectionStartEnd(start, end);
-			selectionMgr.updateCursorCoordinates();
-		}
+        function setSelection(start, end) {
+            end = end === undefined ? start : end;
+            selectionMgr.setSelectionStartEnd(start, end);
+            selectionMgr.updateCursorCoordinates();
+        }
 
-		function keydownHandler(handler) {
-			return function(evt) {
-				if (
-					evt.which !== 17 && // Ctrl
-					evt.which !== 91 && // Cmd
-					evt.which !== 18 && // Alt
-					evt.which !== 16 // Shift
-				) {
-					handler(evt);
-				}
-			};
-		}
+        function keydownHandler(handler) {
+            return function(evt) {
+                if (
+                    evt.which !== 17 && // Ctrl
+                    evt.which !== 91 && // Cmd
+                    evt.which !== 18 && // Alt
+                    evt.which !== 16 // Shift
+                ) {
+                    handler(evt);
+                }
+            };
+        }
 
-		function removeEventListeners() {
-			editor.$window.removeEventListener('keydown', windowKeydownListener);
-			editor.$window.removeEventListener('mouseup', windowMouseupListener);
-		}
+        function removeEventListeners() {
+            editor.$window.removeEventListener('keydown', windowKeydownListener);
+            editor.$window.removeEventListener('mouseup', windowMouseupListener);
+        }
 
-		// In case of Ctrl/Cmd+A outside the editor element
-		function windowKeydownListener(evt) {
-			if (!editor.$window.document.contains(contentElt)) {
-				return removeEventListeners();
-			}
-			keydownHandler(function() {
-				adjustCursorPosition();
-			})(evt);
-		}
-		editor.$window.addEventListener('keydown', windowKeydownListener, false);
+        // In case of Ctrl/Cmd+A outside the editor element
+        function windowKeydownListener(evt) {
+            if (!editor.$window.document.contains(contentElt)) {
+                return removeEventListeners();
+            }
+            keydownHandler(function() {
+                adjustCursorPosition();
+            })(evt);
+        }
+        editor.$window.addEventListener('keydown', windowKeydownListener, false);
 
-		// Mouseup can happen outside the editor element
-		function windowMouseupListener() {
-			if (!editor.$window.document.contains(contentElt)) {
-				return removeEventListeners();
-			}
-			selectionMgr.saveSelectionState(true, false);
-		}
-		editor.$window.addEventListener('mouseup', windowMouseupListener);
-		// This can also provoke selection changes and does not fire mouseup event on Chrome/OSX
-		contentElt.addEventListener('contextmenu', selectionMgr.saveSelectionState.bind(selectionMgr, true, false));
+        // Mouseup can happen outside the editor element
+        function windowMouseupListener() {
+            if (!editor.$window.document.contains(contentElt)) {
+                return removeEventListeners();
+            }
+            selectionMgr.saveSelectionState(true, false);
+        }
+        editor.$window.addEventListener('mouseup', windowMouseupListener);
+        // This can also provoke selection changes and does not fire mouseup event on Chrome/OSX
+        contentElt.addEventListener('contextmenu', selectionMgr.saveSelectionState.cl_bind(selectionMgr, true, false));
 
-		contentElt.addEventListener('keydown', keydownHandler(function(evt) {
-			selectionMgr.saveSelectionState();
-			adjustCursorPosition();
-			editor.$keystrokes.some(function(keystrokeList) {
-				return keystrokeList.some(function(keystroke) {
-					return keystroke.perform(evt, editor);
-				});
-			});
-		}), false);
+        contentElt.addEventListener('keydown', keydownHandler(function(evt) {
+            selectionMgr.saveSelectionState();
+            adjustCursorPosition();
+            editor.$keystrokes.cl_some(function(keystroke) {
+                return keystroke.perform(evt, editor);
+            });
+        }), false);
 
-		contentElt.addEventListener('compositionstart', function() {
-			highlighter.isComposing++;
-		}, false);
+        contentElt.addEventListener('compositionstart', function() {
+            highlighter.isComposing++;
+        }, false);
 
-		contentElt.addEventListener('compositionend', function() {
-			setTimeout(function() {
-				highlighter.isComposing--;
-			}, 0);
-		}, false);
+        contentElt.addEventListener('compositionend', function() {
+            setTimeout(function() {
+                highlighter.isComposing--;
+            }, 0);
+        }, false);
 
-		contentElt.addEventListener('paste', function(evt) {
-			undoMgr.setCurrentMode('single');
-			evt.preventDefault();
-			var data, clipboardData = evt.clipboardData;
-			if (clipboardData) {
-				data = clipboardData.getData('text/plain');
-			} else {
-				clipboardData = editor.$window.clipboardData;
-				data = clipboardData && clipboardData.getData('Text');
-			}
-			if (!data) {
-				return;
-			}
-			replace(selectionMgr.selectionStart, selectionMgr.selectionEnd, data);
-			adjustCursorPosition();
-		}, false);
+        contentElt.addEventListener('paste', function(evt) {
+            undoMgr.setCurrentMode('single');
+            evt.preventDefault();
+            var data, clipboardData = evt.clipboardData;
+            if (clipboardData) {
+                data = clipboardData.getData('text/plain');
+            } else {
+                clipboardData = editor.$window.clipboardData;
+                data = clipboardData && clipboardData.getData('Text');
+            }
+            if (!data) {
+                return;
+            }
+            replace(selectionMgr.selectionStart, selectionMgr.selectionEnd, data);
+            adjustCursorPosition();
+        }, false);
 
-		contentElt.addEventListener('cut', function() {
-			undoMgr.setCurrentMode('single');
-			adjustCursorPosition();
-		}, false);
+        contentElt.addEventListener('cut', function() {
+            undoMgr.setCurrentMode('single');
+            adjustCursorPosition();
+        }, false);
 
-		contentElt.addEventListener('focus', function() {
-			selectionMgr.hasFocus = true;
-			editor.$trigger('focus');
-		}, false);
+        contentElt.addEventListener('focus', function() {
+            selectionMgr.hasFocus = true;
+            editor.$trigger('focus');
+        }, false);
 
-		contentElt.addEventListener('blur', function() {
-			selectionMgr.hasFocus = false;
-			editor.$trigger('blur');
-		}, false);
+        contentElt.addEventListener('blur', function() {
+            selectionMgr.hasFocus = false;
+            editor.$trigger('blur');
+        }, false);
 
-		function addKeystroke(priority, keystroke) {
-			var keystrokeList = editor.$keystrokes[priority] || [];
-			keystrokeList.push(keystroke);
-			editor.$keystrokes[priority] = keystrokeList;
-		}
-		cledit.defaultKeystrokes.forEach(function(keystroke) {
-			addKeystroke(100, keystroke);
-		});
+        function addKeystroke(keystrokes) {
+            if (!Array.isArray(keystrokes)) {
+                keystrokes = [keystrokes];
+            }
+            editor.$keystrokes = editor.$keystrokes.concat(keystrokes).sort(function(keystroke1, keystroke2) {
+                return keystroke1.prority - keystroke2.prority;
+            });
+        }
+        addKeystroke(cledit.defaultKeystrokes);
 
-		editor.selectionMgr = selectionMgr;
-		editor.undoMgr = undoMgr;
-		editor.highlighter = highlighter;
-		editor.watcher = watcher;
-		editor.adjustCursorPosition = adjustCursorPosition;
-		editor.setContent = setContent;
-		editor.replace = replace;
-		editor.replaceAll = replaceAll;
-		editor.replacePreviousText = replacePreviousText;
-		editor.getContent = getTextContent;
-		editor.focus = focus;
-		editor.setSelection = setSelection;
-		editor.addKeystroke = addKeystroke;
-		editor.addMarker = addMarker;
-		editor.removeMarker = removeMarker;
+        editor.selectionMgr = selectionMgr;
+        editor.undoMgr = undoMgr;
+        editor.highlighter = highlighter;
+        editor.watcher = watcher;
+        editor.adjustCursorPosition = adjustCursorPosition;
+        editor.setContent = setContent;
+        editor.replace = replace;
+        editor.replaceAll = replaceAll;
+        editor.replacePreviousText = replacePreviousText;
+        editor.getContent = getTextContent;
+        editor.focus = focus;
+        editor.setSelection = setSelection;
+        editor.addKeystroke = addKeystroke;
+        editor.addMarker = addMarker;
+        editor.removeMarker = removeMarker;
 
-		editor.init = function(options) {
-			options = cledit.Utils.extend({
-				cursorFocusRatio: 0.5,
-				highlighter: function(text) {
-					return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ');
-				},
-				sectionDelimiter: ''
-			}, options || {});
-			editor.options = options;
+        editor.init = function(options) {
+            options = ({
+                cursorFocusRatio: 0.5,
+                highlighter: function(text) {
+                    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ');
+                },
+                sectionDelimiter: ''
+            }).cl_extend(options || {});
+            editor.options = options;
 
-			if (options.content !== undefined) {
-				lastTextContent = options.content.toString();
-				if (lastTextContent.slice(-1) !== '\n') {
-					lastTextContent += '\n';
-				}
-			}
+            if (options.content !== undefined) {
+                lastTextContent = options.content.toString();
+                if (lastTextContent.slice(-1) !== '\n') {
+                    lastTextContent += '\n';
+                }
+            }
 
-			parseSections(lastTextContent, true);
-			if (options.selectionStart !== undefined && options.selectionEnd !== undefined) {
-				editor.setSelection(options.selectionStart, options.selectionEnd);
-			} else {
-				selectionMgr.saveSelectionState();
-			}
-			undoMgr.init();
+            parseSections(lastTextContent, true);
+            if (options.selectionStart !== undefined && options.selectionEnd !== undefined) {
+                editor.setSelection(options.selectionStart, options.selectionEnd);
+            } else {
+                selectionMgr.saveSelectionState();
+            }
+            undoMgr.init();
 
-			if (options.scrollTop !== undefined) {
-				scrollElt.scrollTop = options.scrollTop;
-			}
-		};
+            if (options.scrollTop !== undefined) {
+                scrollElt.scrollTop = options.scrollTop;
+            }
+        };
 
-		return editor;
-	}
+        return editor;
+    }
 
-	window.cledit = cledit;
+    window.cledit = cledit;
 })(window.diff_match_patch);
 
 (function(cledit) {
@@ -393,7 +543,7 @@
         var self = this;
         cledit.Utils.createEventHooks(this);
 
-        styleElts.some(function(styleElt) {
+        styleElts.cl_some(function(styleElt) {
             return editor.$document.head.contains(styleElt);
         }) || createStyleSheet(editor.$document);
 
@@ -409,14 +559,14 @@
         var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
 
         this.fixContent = function(modifiedSections, removedSections, noContentFix) {
-            modifiedSections.forEach(function(section) {
+            modifiedSections.cl_each(function(section) {
                 section.forceHighlighting = true;
                 if (!noContentFix) {
                     if (useBr) {
-                        Array.prototype.slice.call(section.elt.getElementsByClassName('hd-lf')).forEach(function(lfElt) {
+                        section.elt.getElementsByClassName('hd-lf').cl_each(function(lfElt) {
                             lfElt.parentNode.removeChild(lfElt);
                         });
-                        Array.prototype.slice.call(section.elt.getElementsByTagName('br')).forEach(function(brElt) {
+                        section.elt.getElementsByTagName('br').cl_each(function(brElt) {
                             brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
                         });
                     }
@@ -447,7 +597,7 @@
             }
 
             var newSectionList = editor.options.sectionParser ? editor.options.sectionParser(content) : [content];
-            newSectionList = newSectionList.map(function(sectionText) {
+            newSectionList = newSectionList.cl_map(function(sectionText) {
                 return new Section(sectionText);
             });
 
@@ -463,7 +613,7 @@
             } else {
                 // Find modified section starting from top
                 var leftIndex = sectionList.length;
-                sectionList.some(function(section, index) {
+                sectionList.cl_some(function(section, index) {
                     var newSection = newSectionList[index];
                     if (index >= newSectionList.length ||
                         section.forceHighlighting ||
@@ -480,7 +630,7 @@
 
                 // Find modified section starting from bottom
                 var rightIndex = -sectionList.length;
-                sectionList.slice().reverse().some(function(section, index) {
+                sectionList.slice().reverse().cl_some(function(section, index) {
                     var newSection = newSectionList[newSectionList.length - index - 1];
                     if (index >= newSectionList.length ||
                         section.forceHighlighting ||
@@ -509,7 +659,7 @@
             }
 
             var newSectionEltList = editor.$document.createDocumentFragment();
-            modifiedSections.forEach(function(section) {
+            modifiedSections.cl_each(function(section) {
                 section.forceHighlighting = false;
                 highlight(section);
                 newSectionEltList.appendChild(section.elt);
@@ -522,7 +672,7 @@
                 }
 
                 // Remove outdated sections
-                sectionsToRemove.forEach(function(section) {
+                sectionsToRemove.cl_each(function(section) {
                     // section may be already removed
                     section.elt.parentNode === contentElt && contentElt.removeChild(section.elt);
                     // To detect sections that come back with built-in undo
@@ -547,7 +697,7 @@
                 this.addTrailingNode();
                 editor.selectionMgr.restoreSelection();
                 editor.selectionMgr.updateCursorCoordinates();
-            }).bind(this));
+            }).cl_bind(this));
 
             return sectionList;
         };
@@ -570,8 +720,9 @@
 
 (function(cledit) {
 
-    function Keystroke(handler) {
+    function Keystroke(handler, priority) {
         this.handler = handler;
+        this.priority = priority || 100;
     }
 
     Keystroke.prototype.perform = function(evt, editor) {
@@ -721,7 +872,7 @@
 
 	Marker.prototype.adjustOffset = function(diffs) {
 		var startOffset = 0;
-		diffs.forEach((function(diff) {
+		diffs.cl_each((function(diff) {
 			var diffType = diff[0];
 			var diffText = diff[1];
 			var diffOffset = diffText.length;
@@ -741,7 +892,7 @@
 					}
 					break;
 			}
-		}).bind(this));
+		}).cl_bind(this));
 	};
 
 	cledit.Marker = Marker;
@@ -817,7 +968,7 @@
 				}
 			}
 			adjustScroll = false;
-		}).bind(this));
+		}).cl_bind(this));
 
 		this.updateCursorCoordinates = function(adjustScrollParam) {
 			adjustScroll = adjustScroll || adjustScrollParam;
@@ -1120,7 +1271,7 @@
 			var offsetStart = 0;
 			var offsetEnd = 0;
 			var nextOffset = 0;
-			editor.getContent().split(/\s/).some(function(word) {
+			editor.getContent().split(/\s/).cl_some(function(word) {
 				if (word) {
 					offsetStart = nextOffset;
 					offsetEnd = nextOffset + word.length;
@@ -1147,10 +1298,10 @@
 	function UndoMgr(editor, options) {
 		cledit.Utils.createEventHooks(this);
 
-		options = cledit.Utils.extend({
+		options = ({
 			undoStackMaxSize: 200,
 			bufferStateUntilIdle: 1000
-		}, options || {});
+		}).cl_extend(options || {});
 
 		var self = this;
 		var selectionMgr;
@@ -1205,7 +1356,7 @@
 		this.setCurrentMode = function(mode) {
 			stateMgr.currentMode = mode;
 		};
-		this.setDefaultMode = stateMgr.setDefaultMode.bind(stateMgr);
+		this.setDefaultMode = stateMgr.setDefaultMode.cl_bind(stateMgr);
 
 		var diffMatchPatch = new diff_match_patch();
 
@@ -1248,8 +1399,8 @@
 			var content = editor.getContent();
 			if(!isForward) {
 				patches = diffMatchPatch.patch_deepCopy(patches).reverse();
-				patches.forEach(function(patch) {
-					patch.diffs.forEach(function(diff) {
+				patches.cl_each(function(patch) {
+					patch.diffs.cl_each(function(diff) {
 						diff[0] = -diff[0];
 					});
 				});
@@ -1259,8 +1410,8 @@
 			var range = editor.setContent(newContent, true);
 
 			var diffs = diffMatchPatch.diff_main(content, newContent);
-			Object.keys(editor.$markers).forEach(function(id) {
-				editor.$markers[id].adjustOffset(diffs);
+			editor.$markers.cl_each(function(marker) {
+				marker.adjustOffset(diffs);
 			});
 
 			selectionMgr.setSelectionStartEnd(range.end, range.end);
@@ -1356,7 +1507,7 @@
 			var listeners = listenerMap[eventType];
 			if (listeners) {
 				var args = Array.prototype.slice.call(arguments, 1);
-				listeners.forEach(function(listener) {
+				listeners.cl_each(function(listener) {
 					try {
 						listener.apply(object, args);
 					} catch (e) {}
@@ -1380,13 +1531,6 @@
 				}
 			}
 		};
-	};
-
-	Utils.extend = function(object, options) {
-		Object.keys(options).map(function(prop) {
-			object[prop] = options[prop];
-		});
-		return object;
 	};
 
 	Utils.findContainer = function(elt, offset) {

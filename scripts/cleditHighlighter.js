@@ -14,7 +14,7 @@
         var self = this;
         cledit.Utils.createEventHooks(this);
 
-        styleElts.some(function(styleElt) {
+        styleElts.cl_some(function(styleElt) {
             return editor.$document.head.contains(styleElt);
         }) || createStyleSheet(editor.$document);
 
@@ -30,14 +30,14 @@
         var lfHtml = '<span class="lf">' + (useBr ? hiddenLfInnerHtml : '\n') + '</span>';
 
         this.fixContent = function(modifiedSections, removedSections, noContentFix) {
-            modifiedSections.forEach(function(section) {
+            modifiedSections.cl_each(function(section) {
                 section.forceHighlighting = true;
                 if (!noContentFix) {
                     if (useBr) {
-                        Array.prototype.slice.call(section.elt.getElementsByClassName('hd-lf')).forEach(function(lfElt) {
+                        section.elt.getElementsByClassName('hd-lf').cl_each(function(lfElt) {
                             lfElt.parentNode.removeChild(lfElt);
                         });
-                        Array.prototype.slice.call(section.elt.getElementsByTagName('br')).forEach(function(brElt) {
+                        section.elt.getElementsByTagName('br').cl_each(function(brElt) {
                             brElt.parentNode.replaceChild(editor.$document.createTextNode('\n'), brElt);
                         });
                     }
@@ -68,7 +68,7 @@
             }
 
             var newSectionList = editor.options.sectionParser ? editor.options.sectionParser(content) : [content];
-            newSectionList = newSectionList.map(function(sectionText) {
+            newSectionList = newSectionList.cl_map(function(sectionText) {
                 return new Section(sectionText);
             });
 
@@ -84,7 +84,7 @@
             } else {
                 // Find modified section starting from top
                 var leftIndex = sectionList.length;
-                sectionList.some(function(section, index) {
+                sectionList.cl_some(function(section, index) {
                     var newSection = newSectionList[index];
                     if (index >= newSectionList.length ||
                         section.forceHighlighting ||
@@ -101,7 +101,7 @@
 
                 // Find modified section starting from bottom
                 var rightIndex = -sectionList.length;
-                sectionList.slice().reverse().some(function(section, index) {
+                sectionList.slice().reverse().cl_some(function(section, index) {
                     var newSection = newSectionList[newSectionList.length - index - 1];
                     if (index >= newSectionList.length ||
                         section.forceHighlighting ||
@@ -130,7 +130,7 @@
             }
 
             var newSectionEltList = editor.$document.createDocumentFragment();
-            modifiedSections.forEach(function(section) {
+            modifiedSections.cl_each(function(section) {
                 section.forceHighlighting = false;
                 highlight(section);
                 newSectionEltList.appendChild(section.elt);
@@ -143,7 +143,7 @@
                 }
 
                 // Remove outdated sections
-                sectionsToRemove.forEach(function(section) {
+                sectionsToRemove.cl_each(function(section) {
                     // section may be already removed
                     section.elt.parentNode === contentElt && contentElt.removeChild(section.elt);
                     // To detect sections that come back with built-in undo
@@ -168,7 +168,7 @@
                 this.addTrailingNode();
                 editor.selectionMgr.restoreSelection();
                 editor.selectionMgr.updateCursorCoordinates();
-            }).bind(this));
+            }).cl_bind(this));
 
             return sectionList;
         };

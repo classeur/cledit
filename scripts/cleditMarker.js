@@ -13,7 +13,7 @@
 
 	Marker.prototype.adjustOffset = function(diffs) {
 		var startOffset = 0;
-		diffs.forEach((function(diff) {
+		diffs.cl_each((function(diff) {
 			var diffType = diff[0];
 			var diffText = diff[1];
 			var diffOffset = diffText.length;
@@ -33,7 +33,7 @@
 					}
 					break;
 			}
-		}).bind(this));
+		}).cl_bind(this));
 	};
 
 	cledit.Marker = Marker;

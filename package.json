@@ -15,7 +15,10 @@
     "url": "https://github.com/classeur/cledit/issues"
   },
   "homepage": "https://github.com/classeur/cledit#readme",
-  "dependencies": {
+  "devDependencies": {
+    "clunderscore": "^0.1.0",
+    "googlediff": "^0.1.0",
+    "prismjs": "0.0.1",
     "gulp-bump": "^1.0.0",
     "gulp-util": "^3.0.6"
   }

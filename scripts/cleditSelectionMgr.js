@@ -67,7 +67,7 @@
 				}
 			}
 			adjustScroll = false;
-		}).bind(this));
+		}).cl_bind(this));
 
 		this.updateCursorCoordinates = function(adjustScrollParam) {
 			adjustScroll = adjustScroll || adjustScrollParam;
@@ -370,7 +370,7 @@
 			var offsetStart = 0;
 			var offsetEnd = 0;
 			var nextOffset = 0;
-			editor.getContent().split(/\s/).some(function(word) {
+			editor.getContent().split(/\s/).cl_some(function(word) {
 				if (word) {
 					offsetStart = nextOffset;
 					offsetEnd = nextOffset + word.length;
