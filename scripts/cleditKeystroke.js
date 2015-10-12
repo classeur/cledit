@@ -5,28 +5,6 @@
         this.priority = priority || 100;
     }
 
-    Keystroke.prototype.perform = function(evt, editor) {
-        var textContent = editor.getContent();
-        var min = Math.min(editor.selectionMgr.selectionStart, editor.selectionMgr.selectionEnd);
-        var max = Math.max(editor.selectionMgr.selectionStart, editor.selectionMgr.selectionEnd);
-        var isBackwardSelection = editor.selectionMgr.selectionStart > editor.selectionMgr.selectionEnd;
-        var state = {
-            before: textContent.slice(0, min),
-            after: textContent.slice(max),
-            selection: textContent.slice(min, max)
-        };
-        if (this.handler(evt, state, editor)) {
-            editor.setContent(state.before + state.selection + state.after, false, min);
-            min = state.before.length;
-            max = min + state.selection.length;
-            editor.selectionMgr.setSelectionStartEnd(
-                isBackwardSelection ? max : min,
-                isBackwardSelection ? min : max
-            );
-            return true;
-        }
-    };
-
     cledit.Keystroke = Keystroke;
 
     var clearNewline;
