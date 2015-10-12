@@ -418,8 +418,28 @@
         contentElt.addEventListener('keydown', keydownHandler(function(evt) {
             selectionMgr.saveSelectionState();
             adjustCursorPosition();
+
+            // Perform keystroke
+            var textContent = editor.getContent();
+            var min = Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd);
+            var max = Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd);
+            var isBackwardSelection = selectionMgr.selectionStart > selectionMgr.selectionEnd;
+            var state = {
+                before: textContent.slice(0, min),
+                after: textContent.slice(max),
+                selection: textContent.slice(min, max)
+            };
             editor.$keystrokes.cl_some(function(keystroke) {
-                return keystroke.perform(evt, editor);
+                if (keystroke.handler(evt, state, editor)) {
+                    editor.setContent(state.before + state.selection + state.after, false, min);
+                    min = state.before.length;
+                    max = min + state.selection.length;
+                    selectionMgr.setSelectionStartEnd(
+                        isBackwardSelection ? max : min,
+                        isBackwardSelection ? min : max
+                    );
+                    return true;
+                }
             });
         }), false);
 
@@ -470,7 +490,7 @@
                 keystrokes = [keystrokes];
             }
             editor.$keystrokes = editor.$keystrokes.concat(keystrokes).sort(function(keystroke1, keystroke2) {
-                return keystroke1.prority - keystroke2.prority;
+                return keystroke1.priority - keystroke2.priority;
             });
         }
         addKeystroke(cledit.defaultKeystrokes);
@@ -724,28 +744,6 @@
         this.handler = handler;
         this.priority = priority || 100;
     }
-
-    Keystroke.prototype.perform = function(evt, editor) {
-        var textContent = editor.getContent();
-        var min = Math.min(editor.selectionMgr.selectionStart, editor.selectionMgr.selectionEnd);
-        var max = Math.max(editor.selectionMgr.selectionStart, editor.selectionMgr.selectionEnd);
-        var isBackwardSelection = editor.selectionMgr.selectionStart > editor.selectionMgr.selectionEnd;
-        var state = {
-            before: textContent.slice(0, min),
-            after: textContent.slice(max),
-            selection: textContent.slice(min, max)
-        };
-        if (this.handler(evt, state, editor)) {
-            editor.setContent(state.before + state.selection + state.after, false, min);
-            min = state.before.length;
-            max = min + state.selection.length;
-            editor.selectionMgr.setSelectionStartEnd(
-                isBackwardSelection ? max : min,
-                isBackwardSelection ? min : max
-            );
-            return true;
-        }
-    };
 
     cledit.Keystroke = Keystroke;
 
