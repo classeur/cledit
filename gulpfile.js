@@ -1,14 +1,10 @@
-var childProcess = require('child_process');
-var gulp = require('gulp');
+var clgulp = require('clgulp');
+var gulp = clgulp(require('gulp'));
+var exec = clgulp.exec;
+var util = clgulp.util;
 var connect = require('gulp-connect');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
-var bump = require('gulp-bump');
-var util = require('gulp-util');
-
-gulp.task('patch', bumpTask('patch'));
-gulp.task('minor', bumpTask('minor'));
-gulp.task('major', bumpTask('major'));
 
 gulp.task('tag', ['default'], function(cb) {
     var version = require('./package.json').version;
@@ -48,27 +44,3 @@ gulp.task('build-js-min', function() {
 });
 
 gulp.task('default', ['build-js', 'build-js-min']);
-
-function bumpTask(importance) {
-    return function() {
-        return gulp.src([
-                './package.json'
-            ])
-            .pipe(bump({
-                type: importance
-            }))
-            .pipe(gulp.dest('./'));
-    };
-}
-
-function exec(cmds, cb) {
-    cmds.length === 0 ? cb() : childProcess.exec(cmds.shift(), {
-        cwd: process.cwd()
-    }, function(err, stdout, stderr) {
-        if (err) {
-            return cb(err);
-        }
-        util.log(stdout, stderr);
-        exec(cmds, cb);
-    });
-}

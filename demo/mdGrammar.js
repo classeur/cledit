@@ -241,18 +241,18 @@
 		};
 		if (options.maths) {
 			rest['math block'] = {
-				pattern: /\\\\\[[\s\S]*?\\\\\]/g,
+				pattern: /\\\[[\s\S]*?\\\]/g,
 				inside: {
-					"cl cl-bracket-start": /^\\\\\[/,
-					"cl cl-bracket-end": /\\\\\]$/,
+					"cl cl-bracket-start": /^\\\[/,
+					"cl cl-bracket-end": /\\\]$/,
 					rest: latex
 				}
 			};
 			rest['math inline'] = {
-				pattern: /\\\\\([\s\S]*?\\\\\)/g,
+				pattern: /\\\([\s\S]*?\\\)/g,
 				inside: {
-					"cl cl-bracket-start": /^\\\\\(/,
-					"cl cl-bracket-end": /\\\\\)$/,
+					"cl cl-bracket-start": /^\\\(/,
+					"cl cl-bracket-end": /\\\)$/,
 					rest: latex
 				}
 			};
