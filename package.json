@@ -1,6 +1,6 @@
 {
   "name": "cledit",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Classeur ContentEditable engine",
   "main": "dist/cledit.js",
   "repository": {
