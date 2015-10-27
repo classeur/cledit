@@ -114,23 +114,6 @@
             }
         }
 
-        function replacePreviousText(text, replacement) {
-            var offset = selectionMgr.selectionStart;
-            if (offset !== selectionMgr.selectionEnd) {
-                return false;
-            }
-            var range = selectionMgr.createRange(offset - text.length, offset);
-            if ('' + range != text) {
-                return false;
-            }
-            range.deleteContents();
-            range.insertNode(editor.$document.createTextNode(replacement));
-            offset = offset - text.length + replacement.length;
-            selectionMgr.setSelectionStartEnd(offset, offset);
-            selectionMgr.updateCursorCoordinates(true);
-            return true;
-        }
-
         function focus() {
             selectionMgr.restoreSelection();
         }
@@ -352,7 +335,6 @@
         editor.setContent = setContent;
         editor.replace = replace;
         editor.replaceAll = replaceAll;
-        editor.replacePreviousText = replacePreviousText;
         editor.getContent = getTextContent;
         editor.focus = focus;
         editor.setSelection = setSelection;
