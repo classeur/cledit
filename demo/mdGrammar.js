@@ -265,8 +265,7 @@
 				}
 			};
 			rest['math expr inline'] = {
-				pattern: /([^\d])\$[\s\S]*?\$(?!\d)/g,
-				lookbehind: true,
+				pattern: /\$(?!\s)[\s\S]*?\S\$(?!\d)/g,
 				inside: {
 					"cl cl-bracket-start": /^\$/,
 					"cl cl-bracket-end": /\$$/,
