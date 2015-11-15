@@ -697,6 +697,7 @@
                     childNode = nextNode;
                 }
                 this.addTrailingNode();
+                self.$trigger('highlighted');
                 editor.selectionMgr.restoreSelection();
                 editor.selectionMgr.updateCursorCoordinates();
             }).cl_bind(this));
