@@ -1,116 +1,178 @@
 (function(cledit) {
 
-    function Keystroke(handler, priority) {
-        this.handler = handler;
-        this.priority = priority || 100;
-    }
+	function Keystroke(handler, priority) {
+		this.handler = handler;
+		this.priority = priority || 100;
+	}
 
-    cledit.Keystroke = Keystroke;
+	cledit.Keystroke = Keystroke;
 
-    var clearNewline;
-    cledit.defaultKeystrokes = [
+	var clearNewline, charTypes = Object.create(null);
 
-        new Keystroke(function(evt, state, editor) {
-            if ((!evt.ctrlKey && !evt.metaKey) || evt.altKey) {
-                return;
-            }
-            var keyCode = evt.charCode || evt.keyCode;
-            var keyCodeChar = String.fromCharCode(keyCode).toLowerCase();
-            var action;
-            switch (keyCodeChar) {
-                case "y":
-                    action = 'redo';
-                    break;
-                case "z":
-                    action = evt.shiftKey ? 'redo' : 'undo';
-                    break;
-            }
-            if (action) {
-                evt.preventDefault();
-                setTimeout(function() {
-                    editor.undoMgr[action]();
-                }, 10);
-                return true;
-            }
-        }),
+	// Word separators, as in Sublime Text
+	'./\\()"\'-:,.;<>~!@#$%^&*|+=[]{}`~?'.split('').cl_each(function(wordSeparator) {
+		charTypes[wordSeparator] = 'wordSeparator';
+	});
+	charTypes[' '] = 'space';
+	charTypes['\t'] = 'space';
+	charTypes['\n'] = 'newLine';
 
-        new Keystroke(function(evt, state) {
-            if (evt.which !== 9 || evt.metaKey || evt.ctrlKey) {
-                // Not tab
-                return;
-            }
+	function getNextWordOffset(text, offset, isBackward) {
+		var previousType;
+		while (offset > 0 && offset < text.length) {
+			var currentType = charTypes[isBackward ? text[offset - 1] : text[offset]] || 'word';
+			if (previousType && currentType !== previousType && previousType !== 'space') {
+				break;
+			}
+			previousType = currentType;
+			isBackward ? offset-- : offset++;
+		}
+		return offset;
+	}
 
-            function strSplice(str, i, remove, add) {
-                remove = +remove || 0;
-                add = add || '';
-                return str.slice(0, i) + add + str.slice(i + remove);
-            }
+	cledit.defaultKeystrokes = [
 
-            evt.preventDefault();
-            var isInverse = evt.shiftKey;
-            var lf = state.before.lastIndexOf('\n') + 1;
-            if (isInverse) {
-                if (/\s/.test(state.before.charAt(lf))) {
-                    state.before = strSplice(state.before, lf, 1);
-                }
-                state.selection = state.selection.replace(/^[ \t]/gm, '');
-            } else {
-                if (state.selection) {
-                    state.before = strSplice(state.before, lf, 0, '\t');
-                    state.selection = state.selection.replace(/\n(?=[\s\S])/g, '\n\t');
-                } else {
-                    state.before += '\t';
-                }
-            }
-            return true;
-        }),
+		new Keystroke(function(evt, state, editor) {
+			if ((!evt.ctrlKey && !evt.metaKey) || evt.altKey) {
+				return;
+			}
+			var keyCode = evt.charCode || evt.keyCode;
+			var keyCodeChar = String.fromCharCode(keyCode).toLowerCase();
+			var action;
+			switch (keyCodeChar) {
+				case 'y':
+					action = 'redo';
+					break;
+				case 'z':
+					action = evt.shiftKey ? 'redo' : 'undo';
+					break;
+			}
+			if (action) {
+				evt.preventDefault();
+				setTimeout(function() {
+					editor.undoMgr[action]();
+				}, 10);
+				return true;
+			}
+		}),
 
-        new Keystroke(function(evt, state, editor) {
-            if (evt.which !== 13) {
-                // Not enter
-                clearNewline = false;
-                return;
-            }
+		new Keystroke(function(evt, state) {
+			if (evt.which !== 9 /* tab */ || evt.metaKey || evt.ctrlKey) {
+				return;
+			}
 
-            evt.preventDefault();
-            var lf = state.before.lastIndexOf('\n') + 1;
-            if (clearNewline) {
-                state.before = state.before.substring(0, lf);
-                state.selection = '';
-                clearNewline = false;
-                return true;
-            }
-            clearNewline = false;
-            var previousLine = state.before.slice(lf);
-            var indent = previousLine.match(/^\s*/)[0];
-            if (indent.length) {
-                clearNewline = true;
-            }
+			function strSplice(str, i, remove, add) {
+				remove = +remove || 0;
+				add = add || '';
+				return str.slice(0, i) + add + str.slice(i + remove);
+			}
 
-            editor.undoMgr.setCurrentMode('single');
-            state.before += '\n' + indent;
-            state.selection = '';
-            return true;
-        }),
+			evt.preventDefault();
+			var isInverse = evt.shiftKey;
+			var lf = state.before.lastIndexOf('\n') + 1;
+			if (isInverse) {
+				if (/\s/.test(state.before.charAt(lf))) {
+					state.before = strSplice(state.before, lf, 1);
+				}
+				state.selection = state.selection.replace(/^[ \t]/gm, '');
+			} else {
+				if (state.selection) {
+					state.before = strSplice(state.before, lf, 0, '\t');
+					state.selection = state.selection.replace(/\n(?=[\s\S])/g, '\n\t');
+				} else {
+					state.before += '\t';
+				}
+			}
+			return true;
+		}),
 
-        new Keystroke(function(evt, state, editor) {
-            if (evt.which !== 8 && evt.which !== 46) {
-                // Not backspace nor delete
-                return;
-            }
+		new Keystroke(function(evt, state, editor) {
+			if (evt.which !== 13 /* enter */ ) {
+				clearNewline = false;
+				return;
+			}
 
-            evt.preventDefault();
-            editor.undoMgr.setCurrentMode('delete');
-            if (!state.selection) {
-                if (evt.which === 8) {
-                    state.before = state.before.slice(0, -1);
-                } else {
-                    state.after = state.after.slice(1);
-                }
-            }
-            state.selection = '';
-            return true;
-        })
-    ];
+			evt.preventDefault();
+			var lf = state.before.lastIndexOf('\n') + 1;
+			if (clearNewline) {
+				state.before = state.before.substring(0, lf);
+				state.selection = '';
+				clearNewline = false;
+				return true;
+			}
+			clearNewline = false;
+			var previousLine = state.before.slice(lf);
+			var indent = previousLine.match(/^\s*/)[0];
+			if (indent.length) {
+				clearNewline = true;
+			}
+
+			editor.undoMgr.setCurrentMode('single');
+			state.before += '\n' + indent;
+			state.selection = '';
+			return true;
+		}),
+
+		new Keystroke(function(evt, state, editor) {
+			if (evt.which !== 8 /* backspace */ && evt.which !== 46 /* delete */ ) {
+				return;
+			}
+
+			editor.undoMgr.setCurrentMode('delete');
+			if (!state.selection) {
+				if (evt.altKey) {
+					// Custom kill word behavior
+					var text = state.before + state.after;
+					var offset = getNextWordOffset(text, state.before.length, evt.which === 8);
+					if (evt.which === 8) {
+						state.before = state.before.slice(0, offset);
+					} else {
+						state.after = state.after.slice(offset - text.length);
+					}
+					evt.preventDefault();
+					return true;
+				}
+				// Special treatment for end of lines
+				else if (evt.which === 8 && state.before.slice(-1) === '\n') {
+					state.before = state.before.slice(0, -1);
+					evt.preventDefault();
+					return true;
+				} else if (evt.which === 46 && state.after.slice(0, 1) === '\n') {
+					state.after = state.after.slice(1);
+					evt.preventDefault();
+					return true;
+				}
+			} else {
+				state.selection = '';
+				evt.preventDefault();
+				return true;
+			}
+		}),
+
+		new Keystroke(function(evt, state, editor) {
+			if (!evt.altKey || (evt.which !== 37 /* left arrow*/ && evt.which !== 39 /* right arrow*/ )) {
+				return;
+			}
+
+			// Custom jump behavior
+			var textContent = editor.getContent();
+			var offset = getNextWordOffset(textContent, editor.selectionMgr.selectionEnd, evt.which === 37);
+			if (evt.shiftKey) {
+				// rebuild the state completely
+				var min = Math.min(editor.selectionMgr.selectionStart, offset);
+				var max = Math.max(editor.selectionMgr.selectionStart, offset);
+				state.before = textContent.slice(0, min);
+				state.after = textContent.slice(max);
+				state.selection = textContent.slice(min, max);
+				state.isBackwardSelection = editor.selectionMgr.selectionStart > offset;
+			} else {
+				state.before = textContent.slice(0, offset);
+				state.after = textContent.slice(offset);
+				state.selection = '';
+			}
+			evt.preventDefault();
+			return true;
+		})
+	];
 
 })(window.cledit);

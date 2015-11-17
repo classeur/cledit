@@ -255,11 +255,11 @@
             var textContent = editor.getContent();
             var min = Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd);
             var max = Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd);
-            var isBackwardSelection = selectionMgr.selectionStart > selectionMgr.selectionEnd;
             var state = {
                 before: textContent.slice(0, min),
                 after: textContent.slice(max),
-                selection: textContent.slice(min, max)
+                selection: textContent.slice(min, max),
+                isBackwardSelection: selectionMgr.selectionStart > selectionMgr.selectionEnd
             };
             editor.$keystrokes.cl_some(function(keystroke) {
                 if (keystroke.handler(evt, state, editor)) {
@@ -267,8 +267,8 @@
                     min = state.before.length;
                     max = min + state.selection.length;
                     selectionMgr.setSelectionStartEnd(
-                        isBackwardSelection ? max : min,
-                        isBackwardSelection ? min : max
+                        state.isBackwardSelection ? max : min,
+                        state.isBackwardSelection ? min : max
                     );
                     return true;
                 }
