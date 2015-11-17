@@ -120,7 +120,8 @@
 
 			editor.undoMgr.setCurrentMode('delete');
 			if (!state.selection) {
-				if (evt.altKey) {
+                var isJump = (cledit.Utils.isMac && evt.altKey) || (!cledit.Utils.isMac && evt.ctrlKey);
+				if (isJump) {
 					// Custom kill word behavior
 					var text = state.before + state.after;
 					var offset = getNextWordOffset(text, state.before.length, evt.which === 8);
@@ -150,9 +151,13 @@
 		}),
 
 		new Keystroke(function(evt, state, editor) {
-			if (!evt.altKey || (evt.which !== 37 /* left arrow*/ && evt.which !== 39 /* right arrow*/ )) {
+			if (evt.which !== 37 /* left arrow */ && evt.which !== 39 /* right arrow */ ) {
 				return;
 			}
+            var isJump = (evt.altKey && cledit.Utils.isMac) || (evt.ctrlKey && !cledit.Utils.isMac);
+            if (!isJump) {
+                return;
+            }
 
 			// Custom jump behavior
 			var textContent = editor.getContent();

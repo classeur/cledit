@@ -3,7 +3,8 @@
 	var Utils = {
 		isGecko: 'MozAppearance' in document.documentElement.style,
 		isWebkit: 'WebkitAppearance' in document.documentElement.style,
-		isMsie: 'msTransform' in document.documentElement.style
+		isMsie: 'msTransform' in document.documentElement.style,
+		isMac: navigator.userAgent.indexOf('Mac OS X') !== -1
 	};
 
 	// Faster than setTimeout(0). Credit: http://dbaron.org/log/20100309-faster-timeouts
