@@ -742,7 +742,7 @@
 
     function getNextWordOffset(text, offset, isBackward) {
         var previousType;
-        while (offset > 0 && offset < text.length) {
+        while ((isBackward && offset > 0) || (!isBackward && offset < text.length)) {
             var currentType = charTypes[isBackward ? text[offset - 1] : text[offset]] || 'word';
             if (previousType && currentType !== previousType) {
                 if (previousType === 'word' || currentType === 'space' || previousType === 'newLine' || currentType === 'newLine') {
