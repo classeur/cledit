@@ -406,11 +406,11 @@
             var textContent = editor.getContent();
             var min = Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd);
             var max = Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd);
-            var isBackwardSelection = selectionMgr.selectionStart > selectionMgr.selectionEnd;
             var state = {
                 before: textContent.slice(0, min),
                 after: textContent.slice(max),
-                selection: textContent.slice(min, max)
+                selection: textContent.slice(min, max),
+                isBackwardSelection: selectionMgr.selectionStart > selectionMgr.selectionEnd
             };
             editor.$keystrokes.cl_some(function(keystroke) {
                 if (keystroke.handler(evt, state, editor)) {
@@ -418,8 +418,8 @@
                     min = state.before.length;
                     max = min + state.selection.length;
                     selectionMgr.setSelectionStartEnd(
-                        isBackwardSelection ? max : min,
-                        isBackwardSelection ? min : max
+                        state.isBackwardSelection ? max : min,
+                        state.isBackwardSelection ? min : max
                     );
                     return true;
                 }
@@ -730,7 +730,31 @@
 
     cledit.Keystroke = Keystroke;
 
-    var clearNewline;
+    var clearNewline, charTypes = Object.create(null);
+
+    // Word separators, as in Sublime Text
+    './\\()"\'-:,.;<>~!@#$%^&*|+=[]{}`~?'.split('').cl_each(function(wordSeparator) {
+        charTypes[wordSeparator] = 'wordSeparator';
+    });
+    charTypes[' '] = 'space';
+    charTypes['\t'] = 'space';
+    charTypes['\n'] = 'newLine';
+
+    function getNextWordOffset(text, offset, isBackward) {
+        var previousType;
+        while (offset > 0 && offset < text.length) {
+            var currentType = charTypes[isBackward ? text[offset - 1] : text[offset]] || 'word';
+            if (previousType && currentType !== previousType) {
+                if (previousType === 'word' || currentType === 'space' || previousType === 'newLine' || currentType === 'newLine') {
+                    break;
+                }
+            }
+            previousType = currentType;
+            isBackward ? offset-- : offset++;
+        }
+        return offset;
+    }
+
     cledit.defaultKeystrokes = [
 
         new Keystroke(function(evt, state, editor) {
@@ -741,10 +765,10 @@
             var keyCodeChar = String.fromCharCode(keyCode).toLowerCase();
             var action;
             switch (keyCodeChar) {
-                case "y":
+                case 'y':
                     action = 'redo';
                     break;
-                case "z":
+                case 'z':
                     action = evt.shiftKey ? 'redo' : 'undo';
                     break;
             }
@@ -758,8 +782,7 @@
         }),
 
         new Keystroke(function(evt, state) {
-            if (evt.which !== 9 || evt.metaKey || evt.ctrlKey) {
-                // Not tab
+            if (evt.which !== 9 /* tab */ || evt.metaKey || evt.ctrlKey) {
                 return;
             }
 
@@ -789,8 +812,7 @@
         }),
 
         new Keystroke(function(evt, state, editor) {
-            if (evt.which !== 13) {
-                // Not enter
+            if (evt.which !== 13 /* enter */ ) {
                 clearNewline = false;
                 return;
             }
@@ -817,21 +839,68 @@
         }),
 
         new Keystroke(function(evt, state, editor) {
-            if (evt.which !== 8 && evt.which !== 46) {
-                // Not backspace nor delete
+            if (evt.which !== 8 /* backspace */ && evt.which !== 46 /* delete */ ) {
                 return;
             }
 
-            evt.preventDefault();
             editor.undoMgr.setCurrentMode('delete');
             if (!state.selection) {
-                if (evt.which === 8) {
-                    state.before = state.before.slice(0, -1);
-                } else {
-                    state.after = state.after.slice(1);
+                var isJump = (cledit.Utils.isMac && evt.altKey) || (!cledit.Utils.isMac && evt.ctrlKey);
+                if (isJump) {
+                    // Custom kill word behavior
+                    var text = state.before + state.after;
+                    var offset = getNextWordOffset(text, state.before.length, evt.which === 8);
+                    if (evt.which === 8) {
+                        state.before = state.before.slice(0, offset);
+                    } else {
+                        state.after = state.after.slice(offset - text.length);
+                    }
+                    evt.preventDefault();
+                    return true;
                 }
+                // Special treatment for end of lines
+                else if (evt.which === 8 && state.before.slice(-1) === '\n') {
+                    state.before = state.before.slice(0, -1);
+                    evt.preventDefault();
+                    return true;
+                } else if (evt.which === 46 && state.after.slice(0, 1) === '\n') {
+                    state.after = state.after.slice(1);
+                    evt.preventDefault();
+                    return true;
+                }
+            } else {
+                state.selection = '';
+                evt.preventDefault();
+                return true;
             }
-            state.selection = '';
+        }),
+
+        new Keystroke(function(evt, state, editor) {
+            if (evt.which !== 37 /* left arrow */ && evt.which !== 39 /* right arrow */ ) {
+                return;
+            }
+            var isJump = (cledit.Utils.isMac && evt.altKey) || (!cledit.Utils.isMac && evt.ctrlKey);
+            if (!isJump) {
+                return;
+            }
+
+            // Custom jump behavior
+            var textContent = editor.getContent();
+            var offset = getNextWordOffset(textContent, editor.selectionMgr.selectionEnd, evt.which === 37);
+            if (evt.shiftKey) {
+                // rebuild the state completely
+                var min = Math.min(editor.selectionMgr.selectionStart, offset);
+                var max = Math.max(editor.selectionMgr.selectionStart, offset);
+                state.before = textContent.slice(0, min);
+                state.after = textContent.slice(max);
+                state.selection = textContent.slice(min, max);
+                state.isBackwardSelection = editor.selectionMgr.selectionStart > offset;
+            } else {
+                state.before = textContent.slice(0, offset);
+                state.after = textContent.slice(offset);
+                state.selection = '';
+            }
+            evt.preventDefault();
             return true;
         })
     ];
@@ -1443,7 +1512,8 @@
 	var Utils = {
 		isGecko: 'MozAppearance' in document.documentElement.style,
 		isWebkit: 'WebkitAppearance' in document.documentElement.style,
-		isMsie: 'msTransform' in document.documentElement.style
+		isMsie: 'msTransform' in document.documentElement.style,
+		isMac: navigator.userAgent.indexOf('Mac OS X') !== -1
 	};
 
 	// Faster than setTimeout(0). Credit: http://dbaron.org/log/20100309-faster-timeouts
