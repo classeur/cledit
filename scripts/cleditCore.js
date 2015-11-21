@@ -281,7 +281,7 @@
 
         contentElt.addEventListener('compositionend', function() {
             setTimeout(function() {
-                highlighter.isComposing--;
+                highlighter.isComposing && highlighter.isComposing--;
             }, 0);
         }, false);
 
