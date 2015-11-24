@@ -9,13 +9,17 @@
 
 	// Faster than setTimeout(0). Credit: http://dbaron.org/log/20100309-faster-timeouts
 	Utils.defer = (function() {
-		var timeouts = [];
-		var messageName = 'deferMsg';
+		var timeouts = [],
+			messageName = 'deferMsg';
 		window.addEventListener('message', function(evt) {
 			if (evt.source == window && evt.data == messageName) {
 				evt.stopPropagation();
 				if (timeouts.length > 0) {
-					timeouts.shift()();
+					try {
+						timeouts.shift()();
+					} catch(e) {
+						console.error(e.message, e.stack);
+					}
 				}
 			}
 		}, true);
@@ -52,7 +56,9 @@
 				listeners.cl_each(function(listener) {
 					try {
 						listener.apply(object, args);
-					} catch (e) {}
+					} catch (e) {
+						console.error(e.message, e.stack);
+					}
 				});
 			}
 		};

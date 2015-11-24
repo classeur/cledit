@@ -131,9 +131,9 @@
 			saveLastSelection();
 		}
 
-		this.setSelectionStartEnd = function(start, end) {
+		this.setSelectionStartEnd = function(start, end, focus) {
 			setSelection(start, end);
-			return this.restoreSelection();
+			return focus !== false && this.restoreSelection();
 		};
 
 		this.saveSelectionState = (function() {
@@ -348,7 +348,7 @@
 						startOffset.offsetInContainer -= 1;
 					}
 				} else {
-					if (endOffset.offset === container.textContent.length) {
+					if (endOffset.offsetInContainer === container.textContent.length) {
 						// Need to calculate offset+1
 						endOffset = inputOffset + 1;
 					} else {

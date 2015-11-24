@@ -167,9 +167,6 @@
                 noContentFix = false;
             });
             var newTextContent = getTextContent();
-            if (newTextContent && newTextContent == lastTextContent) {
-                return;
-            }
             var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent);
             if (!ignorePatches) {
                 var patches = diffMatchPatch.patch_make(lastTextContent, diffs);
