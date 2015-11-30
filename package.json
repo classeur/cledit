@@ -12,7 +12,8 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "clgulp": "^1.0.4",
-    "clunderscore": "^0.1.0",
+    "clunderscore": "^1.0.0",
+    "eslint-config-classeur": "^1.0.1",
     "googlediff": "^0.1.0",
     "gulp": "^3.9.0",
     "gulp-concat": "^2.6.0",
