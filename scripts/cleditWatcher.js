@@ -1,35 +1,33 @@
 (function(cledit) {
-
 	function Watcher(editor, listener) {
-		this.isWatching = false;
-		var contentObserver;
+		this.isWatching = false
+		var contentObserver
 		this.startWatching = function() {
-			this.stopWatching();
-			this.isWatching = true;
-			contentObserver = new MutationObserver(listener);
+			this.stopWatching()
+			this.isWatching = true
+			contentObserver = new MutationObserver(listener)
 			contentObserver.observe(editor.$contentElt, {
 				childList: true,
 				subtree: true,
 				characterData: true
-			});
-		};
+			})
+		}
 		this.stopWatching = function() {
-			if(contentObserver) {
-				contentObserver.disconnect();
-				contentObserver = undefined;
+			if (contentObserver) {
+				contentObserver.disconnect()
+				contentObserver = undefined
 			}
-			this.isWatching = false;
-		};
+			this.isWatching = false
+		}
 		this.noWatch = function(cb) {
-			if(this.isWatching === true) {
-				this.stopWatching();
-				cb();
-				return this.startWatching();
+			if (this.isWatching === true) {
+				this.stopWatching()
+				cb()
+				return this.startWatching()
 			}
-			cb();
-		};
+			cb()
+		}
 	}
 
-	cledit.Watcher = Watcher;
-
-})(window.cledit);
+	cledit.Watcher = Watcher
+})(window.cledit)
