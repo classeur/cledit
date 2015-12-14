@@ -3,11 +3,13 @@
   "version": "1.0.7",
   "description": "Classeur ContentEditable engine",
   "main": "dist/cledit.js",
+  "scripts": {
+    "test": "gulp default lint"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/classeur/cledit.git"
   },
-  "scripts": {},
   "author": "Benoit Schweblin",
   "license": "Apache-2.0",
   "dependencies": {
