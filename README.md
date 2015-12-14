@@ -35,4 +35,4 @@ A usage example can be found in the `demo` folder.
 
 ## License
 
-[MIT](https://github.com/classeur/cledit/blob/master/LICENSE)
+[Apache](https://github.com/classeur/cledit/blob/master/LICENSE)
