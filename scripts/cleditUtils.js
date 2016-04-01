@@ -6,25 +6,28 @@
     isMac: navigator.userAgent.indexOf('Mac OS X') !== -1
   }
 
-  // Faster than setTimeout(0). Credit: http://dbaron.org/log/20100309-faster-timeouts
+  // Faster than setTimeout(0). Credit: https://github.com/stefanpenner/es6-promise
   Utils.defer = (function () {
-    var timeouts = []
-    var messageName = 'deferMsg'
-    window.addEventListener('message', function (evt) {
-      if (evt.source === window && evt.data === messageName) {
-        evt.stopPropagation()
-        if (timeouts.length > 0) {
-          try {
-            timeouts.shift()()
-          } catch (e) {
-            window.console.error(e.message, e.stack)
-          }
-        }
+    var queue = new Array(1000)
+    var queueLength
+    function flush () {
+      for (var i = 0; i < queueLength; i++) {
+        queue[i]()
+        queue[i] = undefined
       }
-    }, true)
+      queueLength = 0
+    }
+
+    var iterations = 0
+    var observer = new window.MutationObserver(flush)
+    var node = document.createTextNode('')
+    observer.observe(node, { characterData: true })
+
     return function (fn) {
-      timeouts.push(fn)
-      window.postMessage(messageName, '*')
+      queue[queueLength++] = fn
+      if (queueLength === 1) {
+        node.data = (iterations = ++iterations % 2)
+      }
     }
   })()
 
