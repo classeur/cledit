@@ -12,7 +12,11 @@
     var queueLength = 0
     function flush () {
       for (var i = 0; i < queueLength; i++) {
-        queue[i]()
+        try {
+          queue[i]()
+        } catch (e) {
+          console.log(e, e.stack)
+        }
         queue[i] = undefined
       }
       queueLength = 0
