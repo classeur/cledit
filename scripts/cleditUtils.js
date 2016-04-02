@@ -9,7 +9,7 @@
   // Faster than setTimeout(0). Credit: https://github.com/stefanpenner/es6-promise
   Utils.defer = (function () {
     var queue = new Array(1000)
-    var queueLength
+    var queueLength = 0
     function flush () {
       for (var i = 0; i < queueLength; i++) {
         queue[i]()
