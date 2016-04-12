@@ -15,7 +15,7 @@
         try {
           queue[i]()
         } catch (e) {
-          console.log(e, e.stack)
+          console.error(e.message, e.stack)
         }
         queue[i] = undefined
       }
@@ -54,7 +54,7 @@
   }
 
   Utils.createEventHooks = function (object) {
-    var listenerMap = {}
+    var listenerMap = Object.create(null)
     object.$trigger = function (eventType) {
       var listeners = listenerMap[eventType]
       if (listeners) {
@@ -63,7 +63,7 @@
           try {
             listener.apply(object, args)
           } catch (e) {
-            window.console.error(e.message, e.stack)
+            console.error(e.message, e.stack)
           }
         })
       }
@@ -80,7 +80,7 @@
       var listeners = listenerMap[eventType]
       if (listeners) {
         var index = listeners.indexOf(listener)
-        if (index > -1) {
+        if (~index) {
           listeners.splice(index, 1)
         }
       }

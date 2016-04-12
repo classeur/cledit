@@ -36,7 +36,7 @@
     function parseSections (content, isInit) {
       sectionList = highlighter.parseSections(content, isInit)
       editor.$allElements = Array.prototype.slice.call(contentElt.querySelectorAll('.cledit-section *'))
-      editor.$trigger('contentChanged', content, sectionList)
+      return sectionList
     }
 
     // Used to detect editor changes
@@ -66,7 +66,7 @@
       return range
     }
 
-    var ignorePatches = false
+    var ignoreUndo = false
     var noContentFix = false
 
     function setContent (value, noUndo, maxStartOffset) {
@@ -84,7 +84,7 @@
       var replacement = value.substring(startOffset, value.length - endOffset)
       var range = replaceContent(startOffset, textContent.length - endOffset, replacement)
       if (range) {
-        ignorePatches = noUndo
+        ignoreUndo = noUndo
         noContentFix = true
       }
       return {
@@ -165,23 +165,23 @@
         highlighter.fixContent(modifiedSections, removedSections, noContentFix)
         noContentFix = false
       })
+
       var newTextContent = getTextContent()
       var diffs = diffMatchPatch.diff_main(lastTextContent, newTextContent)
-      if (!ignorePatches) {
-        var patches = diffMatchPatch.patch_make(lastTextContent, diffs)
-        undoMgr.addPatches(patches)
-        undoMgr.setDefaultMode('typing')
-      }
-
       editor.$markers.cl_each(function (marker) {
         marker.adjustOffset(diffs)
       })
 
-      lastTextContent = newTextContent
       selectionMgr.saveSelectionState()
-      parseSections(lastTextContent)
-      ignorePatches || undoMgr.saveState()
-      ignorePatches = false
+      var sectionList = parseSections(newTextContent)
+      editor.$trigger('contentChanged', newTextContent, diffs, sectionList)
+      if (!ignoreUndo) {
+        undoMgr.addDiffs(lastTextContent, newTextContent, diffs)
+        undoMgr.setDefaultMode('typing')
+        undoMgr.saveState()
+      }
+      ignoreUndo = false
+      lastTextContent = newTextContent
       triggerSpellCheck()
     }
 
@@ -248,7 +248,7 @@
       adjustCursorPosition()
 
       // Perform keystroke
-      var textContent = editor.getContent()
+      var textContent = getTextContent()
       var min = Math.min(selectionMgr.selectionStart, selectionMgr.selectionEnd)
       var max = Math.max(selectionMgr.selectionStart, selectionMgr.selectionEnd)
       var state = {
@@ -356,13 +356,14 @@
         }
       }
 
-      parseSections(lastTextContent, true)
+      var sectionList = parseSections(lastTextContent, true)
+      editor.$trigger('contentChanged', lastTextContent, [0, lastTextContent], sectionList)
       if (options.selectionStart !== undefined && options.selectionEnd !== undefined) {
         editor.setSelection(options.selectionStart, options.selectionEnd)
       } else {
         selectionMgr.saveSelectionState()
       }
-      undoMgr.init()
+      undoMgr.init(options)
 
       if (options.scrollTop !== undefined) {
         scrollElt.scrollTop = options.scrollTop

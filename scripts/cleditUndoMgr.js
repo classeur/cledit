@@ -1,12 +1,11 @@
 /* jshint -W084, -W099 */
 ;(function (cledit, diff_match_patch) {
-  function UndoMgr (editor, options) {
+  function UndoMgr (editor) {
     cledit.Utils.createEventHooks(this)
 
-    options = ({
-      undoStackMaxSize: 200,
-      bufferStateUntilIdle: 1000
-    }).cl_extend(options || {})
+    /* eslint-disable new-cap */
+    var diffMatchPatch = new diff_match_patch()
+		/* eslint-enable new-cap */
 
     var self = this
     var selectionMgr
@@ -17,18 +16,29 @@
     var currentPatches = []
     var debounce = cledit.Utils.debounce
 
-    function State () {}
-
-    function addToStack (stack) {
-      return function () {
-        stack.push(this)
-        this.patches = previousPatches
-        previousPatches = []
+    self.options = {
+      undoStackMaxSize: 200,
+      bufferStateUntilIdle: 1000,
+      patchHandler: {
+        makePatches: function (oldContent, newContent, diffs) {
+          return diffMatchPatch.patch_make(oldContent, diffs)
+        },
+        applyPatches: function (patches, content) {
+          return diffMatchPatch.patch_apply(patches, content)[0]
+        },
+        reversePatches: function (patches) {
+          patches = diffMatchPatch.patch_deepCopy(patches).reverse()
+          patches.cl_each(function (patch) {
+            patch.diffs.cl_each(function (diff) {
+              diff[0] = -diff[0]
+            })
+          })
+          return patches
+        }
       }
     }
 
-    State.prototype.addToUndoStack = addToStack(undoStack)
-    State.prototype.addToRedoStack = addToStack(redoStack)
+    function State () {}
 
     function StateMgr () {
       var currentTime, lastTime
@@ -38,7 +48,7 @@
         currentTime = Date.now()
         return this.currentMode !== 'single' &&
         this.currentMode === lastMode &&
-        currentTime - lastTime < options.bufferStateUntilIdle
+        currentTime - lastTime < self.options.bufferStateUntilIdle
       }
 
       this.setDefaultMode = function (mode) {
@@ -57,17 +67,25 @@
       }
     }
 
+    function addToStack (stack) {
+      return function () {
+        stack.push(this)
+        this.patches = previousPatches
+        previousPatches = []
+      }
+    }
+
+    State.prototype.addToUndoStack = addToStack(undoStack)
+    State.prototype.addToRedoStack = addToStack(redoStack)
+
     var stateMgr = new StateMgr()
     this.setCurrentMode = function (mode) {
       stateMgr.currentMode = mode
     }
     this.setDefaultMode = stateMgr.setDefaultMode.cl_bind(stateMgr)
 
-		/* eslint-disable new-cap */
-    var diffMatchPatch = new diff_match_patch()
-		/* eslint-enable new-cap */
-
-    this.addPatches = function (patches) {
+    this.addDiffs = function (oldContent, newContent, diffs) {
+      var patches = self.options.patchHandler.makePatches(oldContent, newContent, diffs)
       currentPatches.push.apply(currentPatches, patches)
     }
 
@@ -83,7 +101,7 @@
         currentState.addToUndoStack()
 
         // Limit the size of the stack
-        while (undoStack.length > options.undoStackMaxSize) {
+        while (undoStack.length > self.options.undoStackMaxSize) {
           undoStack.shift()
         }
       }
@@ -105,23 +123,23 @@
       // Update editor
       var content = editor.getContent()
       if (!isForward) {
-        patches = diffMatchPatch.patch_deepCopy(patches).reverse()
-        patches.cl_each(function (patch) {
-          patch.diffs.cl_each(function (diff) {
-            diff[0] = -diff[0]
-          })
-        })
+        patches = self.options.patchHandler.reversePatches(patches)
       }
 
-      var newContent = diffMatchPatch.patch_apply(patches, content)[0]
-      var range = editor.setContent(newContent, true)
+      var newContent = self.options.patchHandler.applyPatches(patches, content)
+      var newContentText = newContent.text || newContent
+      var range = editor.setContent(newContentText, true)
+      var selection = newContent.selection || {
+        start: range.end,
+        end: range.end
+      }
 
-      var diffs = diffMatchPatch.diff_main(content, newContent)
+      var diffs = diffMatchPatch.diff_main(content, newContentText)
       editor.$markers.cl_each(function (marker) {
         marker.adjustOffset(diffs)
       })
 
-      selectionMgr.setSelectionStartEnd(range.end, range.end)
+      selectionMgr.setSelectionStartEnd(selection.start, selection.end)
       selectionMgr.updateCursorCoordinates(true)
 
       stateMgr.resetMode()
@@ -152,7 +170,8 @@
       currentState = state
     }
 
-    this.init = function () {
+    this.init = function (options) {
+      self.options.cl_extend(options || {})
       selectionMgr = editor.selectionMgr
       if (!currentState) {
         currentState = new State()
