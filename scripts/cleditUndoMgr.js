@@ -134,11 +134,6 @@
         end: range.end
       }
 
-      var diffs = diffMatchPatch.diff_main(content, newContentText)
-      editor.$markers.cl_each(function (marker) {
-        marker.adjustOffset(diffs)
-      })
-
       selectionMgr.setSelectionStartEnd(selection.start, selection.end)
       selectionMgr.updateCursorCoordinates(true)
 

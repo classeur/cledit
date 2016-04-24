@@ -185,18 +185,6 @@
       triggerSpellCheck()
     }
 
-    // See https://gist.github.com/shimondoodkin/1081133
-    // TODO
-    /*
-     if(/AppleWebKit\/([\d.]+)/.exec(navigator.userAgent)) {
-     var $editableFix = $('<input style="width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
-     $contentElt.blur(function() {
-     $editableFix[0].setSelectionRange(0, 0)
-     $editableFix.blur()
-     })
-     }
-     */
-
     function setSelection (start, end) {
       end = end === undefined ? start : end
       selectionMgr.setSelectionStartEnd(start, end)
@@ -216,28 +204,31 @@
       }
     }
 
-    function removeEventListeners () {
-      editor.$window.removeEventListener('keydown', windowKeydownListener)
-      editor.$window.removeEventListener('mouseup', windowMouseupListener)
+    function tryDestroy () {
+      if (!editor.$window.document.contains(contentElt)) {
+        watcher.stopWatching()
+        editor.$window.removeEventListener('keydown', windowKeydownListener)
+        editor.$window.removeEventListener('mouseup', windowMouseupListener)
+        editor.$trigger('destroy')
+        return true
+      }
     }
 
     // In case of Ctrl/Cmd+A outside the editor element
     function windowKeydownListener (evt) {
-      if (!editor.$window.document.contains(contentElt)) {
-        return removeEventListeners()
+      if (!tryDestroy()) {
+        keydownHandler(function () {
+          adjustCursorPosition()
+        })(evt)
       }
-      keydownHandler(function () {
-        adjustCursorPosition()
-      })(evt)
     }
     editor.$window.addEventListener('keydown', windowKeydownListener, false)
 
     // Mouseup can happen outside the editor element
     function windowMouseupListener () {
-      if (!editor.$window.document.contains(contentElt)) {
-        return removeEventListeners()
+      if (!tryDestroy()) {
+        selectionMgr.saveSelectionState(true, false)
       }
-      selectionMgr.saveSelectionState(true, false)
     }
     editor.$window.addEventListener('mouseup', windowMouseupListener)
     // This can also provoke selection changes and does not fire mouseup event on Chrome/OSX

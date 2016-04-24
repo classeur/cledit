@@ -92,19 +92,21 @@
       var min = Math.min(this.selectionStart, this.selectionEnd)
       var max = Math.max(this.selectionStart, this.selectionEnd)
       var selectionRange = this.createRange(min, max)
-      var selection = editor.$window.getSelection()
-      selection.removeAllRanges()
-      var isBackward = this.selectionStart > this.selectionEnd
-      if (isBackward && selection.extend) {
-        var endRange = selectionRange.cloneRange()
-        endRange.collapse(false)
-        selection.addRange(endRange)
-        selection.extend(selectionRange.startContainer, selectionRange.startOffset)
-      } else {
-        selection.addRange(selectionRange)
+      if (editor.$document.contains(selectionRange.commonAncestorContainer)) {
+        var selection = editor.$window.getSelection()
+        selection.removeAllRanges()
+        var isBackward = this.selectionStart > this.selectionEnd
+        if (isBackward && selection.extend) {
+          var endRange = selectionRange.cloneRange()
+          endRange.collapse(false)
+          selection.addRange(endRange)
+          selection.extend(selectionRange.startContainer, selectionRange.startOffset)
+        } else {
+          selection.addRange(selectionRange)
+        }
+        checkSelection(selectionRange)
+        return selectionRange
       }
-      checkSelection(selectionRange)
-      return selectionRange
     }
 
     var saveLastSelection = debounce(function () {

@@ -5,9 +5,10 @@
 
   var idCounter = 0
 
-  function Marker (offset) {
+  function Marker (offset, trailing) {
     this.id = idCounter++
     this.offset = offset
+    this.trailing = trailing
   }
 
   Marker.prototype.adjustOffset = function (diffs) {
@@ -21,14 +22,18 @@
           startOffset += diffOffset
           break
         case DIFF_INSERT:
-          if (this.offset > startOffset) {
+          if (
+            this.trailing
+              ? this.offset > startOffset
+              : this.offset >= startOffset
+          ) {
             this.offset += diffOffset
           }
           startOffset += diffOffset
           break
         case DIFF_DELETE:
           if (this.offset > startOffset) {
-            this.offset -= diffOffset
+            this.offset -= Math.min(diffOffset, this.offset - startOffset)
           }
           break
       }
