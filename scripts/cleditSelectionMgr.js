@@ -96,11 +96,15 @@
         var selection = editor.$window.getSelection()
         selection.removeAllRanges()
         var isBackward = this.selectionStart > this.selectionEnd
-        if (isBackward && selection.extend) {
-          var endRange = selectionRange.cloneRange()
-          endRange.collapse(false)
-          selection.addRange(endRange)
-          selection.extend(selectionRange.startContainer, selectionRange.startOffset)
+        if (selection.extend) {
+          var beginRange = selectionRange.cloneRange()
+          beginRange.collapse(!isBackward)
+          selection.addRange(beginRange)
+          if (isBackward) {
+            selection.extend(selectionRange.startContainer, selectionRange.startOffset)
+          } else {
+            selection.extend(selectionRange.endContainer, selectionRange.endOffset)
+          }
         } else {
           selection.addRange(selectionRange)
         }
@@ -192,10 +196,14 @@
         if (nodeA === nodeB) {
           // Case 1: nodes are the same
           return offsetA === offsetB ? 0 : (offsetA < offsetB) ? -1 : 1
-        } else if ((nodeC = getClosestAncestorIn(nodeB, nodeA, true))) {
+        } else if (
+          (nodeC = getClosestAncestorIn(nodeB, nodeA, true))
+        ) {
           // Case 2: node C (container B or an ancestor) is a child node of A
           return offsetA <= getNodeIndex(nodeC) ? -1 : 1
-        } else if ((nodeC = getClosestAncestorIn(nodeA, nodeB, true))) {
+        } else if (
+          (nodeC = getClosestAncestorIn(nodeA, nodeB, true))
+        ) {
           // Case 3: node C (container A or an ancestor) is a child node of B
           return getNodeIndex(nodeC) < offsetB ? -1 : 1
         } else {
