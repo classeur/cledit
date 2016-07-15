@@ -191,7 +191,7 @@
     editor.toggleEditable(true)
 
     function getTextContent () {
-      var textContent = contentElt.textContent.replace(/\r\n?/g, '\n') // Mac/DOS to Unix
+      var textContent = contentElt.textContent.replace(/\r[\n\u0085]?|[\u2424\u2028\u0085]/g, '\n') // Markdown-it sanitization (Mac/DOS to Unix)
       if (textContent.slice(-1) !== '\n') {
         textContent += '\n'
       }
