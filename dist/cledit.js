@@ -503,8 +503,8 @@
     editor.init = function (options) {
       options = ({
         cursorFocusRatio: 0.5,
-        highlighter: function (text) {
-          return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ')
+        sectionHighlighter: function (section) {
+          return section.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ')
         },
         sectionDelimiter: ''
       }).cl_extend(options || {})
@@ -592,7 +592,8 @@
     }
 
     function Section (text) {
-      this.text = text
+      this.text = text.text === undefined ? text : text.text
+      this.data = text.data
     }
 
     Section.prototype.setElement = function (elt) {
@@ -713,7 +714,7 @@
     }
 
     function highlight (section) {
-      var html = editor.options.highlighter(section.text).replace(/\n/g, lfHtml)
+      var html = editor.options.sectionHighlighter(section).replace(/\n/g, lfHtml)
       var sectionElt = editor.$document.createElement('div')
       sectionElt.className = 'cledit-section'
       sectionElt.innerHTML = html
