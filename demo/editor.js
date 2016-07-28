@@ -15,8 +15,8 @@ var prismGrammar = window.mdGrammar({
   sups: true
 })
 editor.init({
-  highlighter: function (text) {
-    return window.Prism.highlight(text, prismGrammar)
+  sectionHighlighter: function (section) {
+    return window.Prism.highlight(section.text, prismGrammar)
   },
   // Optional (increases performance on large documents)
   sectionParser: function (text) {

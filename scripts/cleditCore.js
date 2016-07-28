@@ -333,8 +333,8 @@
     editor.init = function (options) {
       options = ({
         cursorFocusRatio: 0.5,
-        highlighter: function (text) {
-          return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ')
+        sectionHighlighter: function (section) {
+          return section.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ')
         },
         sectionDelimiter: ''
       }).cl_extend(options || {})
